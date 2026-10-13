@@ -44,19 +44,25 @@ class LLMService:
     def _call_gemini(self, prompt: str, system_instruction: str = "") -> Optional[str]:
         if not self.gemini_client:
             return None
-        try:
-            full_prompt = prompt
-            if system_instruction:
-                full_prompt = f"System Instruction: {system_instruction}\n\nTask:\n{prompt}"
+        
+        full_prompt = prompt
+        if system_instruction:
+            full_prompt = f"System Instruction: {system_instruction}\n\nTask:\n{prompt}"
+            
+        models_to_try = getattr(settings, "GEMINI_FALLBACK_MODELS", [settings.GEMINI_MODEL])
+        for model_name in models_to_try:
+            try:
+                response = self.gemini_client.models.generate_content(
+                    model=model_name,
+                    contents=full_prompt
+                )
+                if response and response.text:
+                    return response.text
+            except Exception as e:
+                logger.warning(f"Gemini generation error with {model_name}: {e}")
+                continue
                 
-            response = self.gemini_client.models.generate_content(
-                model=settings.GEMINI_MODEL,
-                contents=full_prompt
-            )
-            return response.text
-        except Exception as e:
-            logger.error(f"Gemini generation error: {e}")
-            return None
+        return None
 
     def _call_openai(self, prompt: str, system_instruction: str = "") -> Optional[str]:
         if not self.openai_client:
@@ -211,16 +217,16 @@ CRT Evaluation:
 Technical Engine Context:
 {json.dumps(technicals, indent=2)}
 
-Provide the final Master Trade Verdict in strict JSON format:
+Provide the final Master Trade Verdict in strict JSON format (verdict must be one of: STRONG_BUY, BUY, WAIT, SELL, STRONG_SELL):
 {{
-    "verdict": "STRONG_BUY" | "BUY" | "WAIT" | "SELL" | "STRONG_SELL",
-    "entry_zone": "Price range (e.g., 67,200 - 67,450)",
-    "stop_loss": "Price level",
-    "take_profit_1": "Price level",
-    "take_profit_2": "Price level",
+    "verdict": "STRONG_BUY",
+    "entry_zone": "67,200 - 67,450",
+    "stop_loss": "66,850",
+    "take_profit_1": "68,400",
+    "take_profit_2": "69,200",
     "risk_reward_ratio": "1:3.2",
-    "agent_consensus": "Summary of alignment between Top-Down and CRT agents",
-    "key_risk_factors": ["Risk factors to be wary of"]
+    "agent_consensus": "High alignment between Top-Down macro bullish bias and CRT expansion cycle.",
+    "key_risk_factors": ["Upcoming High-Impact News Event", "Volatility compression"]
 }}
 """
         raw_resp = self.call_llm(prompt, system_instruction)

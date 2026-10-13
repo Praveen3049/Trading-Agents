@@ -20,7 +20,8 @@ class Settings:
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "gemini").lower()
     
     # Preferred models
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+    GEMINI_FALLBACK_MODELS: list = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite"]
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 settings = Settings()
