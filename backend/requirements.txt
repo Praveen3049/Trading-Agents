@@ -3,3 +3,6 @@ uvicorn
 pandas
 numpy
 pydantic
+python-dotenv
+openai
+google-genai
