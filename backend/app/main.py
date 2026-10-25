@@ -43,15 +43,23 @@ def get_assets():
 
 @app.post("/api/market-data")
 def get_market_data(payload: MarketData):
-    """Pulls live/historical OHLCV candle records from MT5 or live feed."""
-    data = market_data_service.get_candles(
+    """Pulls live/historical OHLCV candle records and extracts High-Probability HTF Order Block, FVG, and DOL."""
+    candles_data = market_data_service.get_candles(
         symbol=payload.ticker,
         timeframe=payload.timeframe,
         count=120
     )
+
+    # Extract High-Probability HTF structures (H1 & D1 prioritized)
+    h1_candles = market_data_service.get_candles(symbol=payload.ticker, timeframe="1h", count=60).get("candles", [])
+    d1_candles = market_data_service.get_candles(symbol=payload.ticker, timeframe="1d", count=15).get("candles", [])
+    htf_zones = TechnicalStructureEngine.extract_htf_high_probability_zones(h1_candles, d1_candles)
+
+    candles_data["high_probability_zones"] = htf_zones
+
     return {
         "status": "success",
-        "data": data
+        "data": candles_data
     }
 
 @app.get("/api/ai-status")
@@ -114,6 +122,11 @@ def run_analysis(data: MarketData):
     top_down = TopDownAgent(mtf_context, ticker=data.ticker).analyze()
     crt = CRTAgent(guardeer_analysis, top_down, ticker=data.ticker).validate_setup()
     
+    # High-probability HTF zones
+    h1_candles = market_data_service.get_candles(symbol=data.ticker, timeframe="1h", count=60).get("candles", [])
+    d1_candles = market_data_service.get_candles(symbol=data.ticker, timeframe="1d", count=15).get("candles", [])
+    htf_zones = TechnicalStructureEngine.extract_htf_high_probability_zones(h1_candles, d1_candles)
+
     technical_structure = {
         "current_price": guardeer_analysis.get("current_price") or mtf_context.get("current_price"),
         "trend": guardeer_analysis.get("trend"),
@@ -126,7 +139,8 @@ def run_analysis(data: MarketData):
         "nearest_fvg": guardeer_analysis.get("nearest_fvg"),
         "strong_level": guardeer_analysis.get("strong_level"),
         "weak_level": guardeer_analysis.get("weak_level"),
-        "regime": guardeer_analysis.get("premium_discount", {}).get("regime")
+        "regime": guardeer_analysis.get("premium_discount", {}).get("regime"),
+        "high_probability_zones": htf_zones
     }
     
     master_plan = llm_service.synthesize_master_plan(

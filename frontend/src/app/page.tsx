@@ -16,10 +16,12 @@ export default function Dashboard() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<any>(null);
   const seriesInstanceRef = useRef<any>(null);
+  const priceLinesRef = useRef<any[]>([]);
 
   const [ticker, setTicker] = useState("XAUUSD");
   const [timeframe, setTimeframe] = useState("5m");
   const [marketInfo, setMarketInfo] = useState<any>(null);
+  const [htfZones, setHtfZones] = useState<any>(null);
   const [analysis, setAnalysis] = useState<any>(null);
   const [aiStatus, setAiStatus] = useState<any>(null);
 
@@ -30,6 +32,7 @@ export default function Dashboard() {
   const [isSavingKeys, setIsSavingKeys] = useState(false);
   const [isLoadingChart, setIsLoadingChart] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showOverlays, setShowOverlays] = useState(true);
 
   // Fetch AI Status
   const fetchAiStatus = async () => {
@@ -47,6 +50,129 @@ export default function Dashboard() {
     }
   };
 
+  const parsePrice = (val: any): number | null => {
+    if (!val) return null;
+    const match = String(val).match(/([0-9]+(?:\.[0-9]+)?)/);
+    return match ? parseFloat(match[1]) : null;
+  };
+
+  // Draw ONLY High-Probability HTF Order Block, FVG, DOL and Trade Plan Lines
+  const renderChartOverlays = (plan: any, zones: any) => {
+    if (!seriesInstanceRef.current) return;
+
+    // Clear old price lines
+    priceLinesRef.current.forEach((line) => {
+      try {
+        seriesInstanceRef.current.removePriceLine(line);
+      } catch (e) {
+        // ignore if already removed
+      }
+    });
+    priceLinesRef.current = [];
+
+    if (!showOverlays) return;
+
+    // 1. Draw High-Probability HTF Draw On Liquidity (DOL) Target
+    if (zones?.dol?.price) {
+      const dolLine = seriesInstanceRef.current.createPriceLine({
+        price: zones.dol.price,
+        color: '#c084fc', // Vibrant purple
+        lineWidth: 2,
+        lineStyle: 2, // Dashed
+        axisLabelVisible: true,
+        title: `🎯 ${zones.dol.title}`,
+      });
+      priceLinesRef.current.push(dolLine);
+    }
+
+    // 2. Draw High-Probability HTF Order Block (Top & Bottom)
+    if (zones?.order_block?.top && zones?.order_block?.bottom) {
+      const isBear = zones.order_block.type?.includes('BEARISH');
+      const obColor = isBear ? '#f43f5e' : '#10b981';
+      
+      const obTop = seriesInstanceRef.current.createPriceLine({
+        price: zones.order_block.top,
+        color: obColor,
+        lineWidth: 2,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: `📦 HTF OB TOP [${zones.order_block.top}]`,
+      });
+      const obBtm = seriesInstanceRef.current.createPriceLine({
+        price: zones.order_block.bottom,
+        color: obColor,
+        lineWidth: 2,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: `📦 HTF OB BTM [${zones.order_block.bottom}]`,
+      });
+      priceLinesRef.current.push(obTop, obBtm);
+    }
+
+    // 3. Draw High-Probability HTF Fair Value Gap (FVG Top & Bottom)
+    if (zones?.fvg?.top && zones?.fvg?.bottom) {
+      const fvgTop = seriesInstanceRef.current.createPriceLine({
+        price: zones.fvg.top,
+        color: '#06b6d4', // Sky/Cyan
+        lineWidth: 1,
+        lineStyle: 1, // Dotted
+        axisLabelVisible: true,
+        title: `⚡ HTF FVG TOP [${zones.fvg.top}]`,
+      });
+      const fvgBtm = seriesInstanceRef.current.createPriceLine({
+        price: zones.fvg.bottom,
+        color: '#06b6d4',
+        lineWidth: 1,
+        lineStyle: 1,
+        axisLabelVisible: true,
+        title: `⚡ HTF FVG BTM [${zones.fvg.bottom}]`,
+      });
+      priceLinesRef.current.push(fvgTop, fvgBtm);
+    }
+
+    // 4. Draw Trade Plan Lines (Entry, SL, TP)
+    if (plan) {
+      const entryPrice = parsePrice(plan.entry_zone);
+      if (entryPrice) {
+        const entryLine = seriesInstanceRef.current.createPriceLine({
+          price: entryPrice,
+          color: '#34d399',
+          lineWidth: 2,
+          lineStyle: 0,
+          axisLabelVisible: true,
+          title: `ENTRY [${entryPrice}]`,
+        });
+        priceLinesRef.current.push(entryLine);
+      }
+
+      const slPrice = parsePrice(plan.stop_loss);
+      if (slPrice) {
+        const slLine = seriesInstanceRef.current.createPriceLine({
+          price: slPrice,
+          color: '#fb7185',
+          lineWidth: 2,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: `STOP LOSS [${slPrice}]`,
+        });
+        priceLinesRef.current.push(slLine);
+      }
+
+      const tp1Price = parsePrice(plan.take_profit_1);
+      if (tp1Price) {
+        const tp1Line = seriesInstanceRef.current.createPriceLine({
+          price: tp1Price,
+          color: '#38bdf8',
+          lineWidth: 2,
+          lineStyle: 1,
+          axisLabelVisible: true,
+          title: `TP1 [${tp1Price}]`,
+        });
+        priceLinesRef.current.push(tp1Line);
+      }
+    }
+  };
+
   // Fetch real market candles & feed to TradingView
   const fetchMarketCandles = async (sym: string, tf: string) => {
     setIsLoadingChart(true);
@@ -60,6 +186,9 @@ export default function Dashboard() {
         const json = await res.json();
         const data = json.data;
         setMarketInfo(data);
+        if (data.high_probability_zones) {
+          setHtfZones(data.high_probability_zones);
+        }
 
         if (seriesInstanceRef.current && data.candles && data.candles.length > 0) {
           seriesInstanceRef.current.setData(data.candles);
@@ -67,89 +196,13 @@ export default function Dashboard() {
             chartInstanceRef.current.timeScale().fitContent();
           }
         }
+
+        renderChartOverlays(analysis?.master_plan, data.high_probability_zones);
       }
     } catch (err) {
       console.error("Failed to load real market candles:", err);
     } finally {
       setIsLoadingChart(false);
-    }
-  };
-
-  const priceLinesRef = useRef<any[]>([]);
-
-  const parsePrice = (val: any): number | null => {
-    if (!val) return null;
-    const match = String(val).match(/([0-9]+(?:\.[0-9]+)?)/);
-    return match ? parseFloat(match[1]) : null;
-  };
-
-  const updateChartOverlays = (plan: any) => {
-    if (!seriesInstanceRef.current || !plan) return;
-
-    // Clear old price lines
-    priceLinesRef.current.forEach((line) => {
-      try {
-        seriesInstanceRef.current.removePriceLine(line);
-      } catch (e) {
-        // ignore if already removed
-      }
-    });
-    priceLinesRef.current = [];
-
-    // Entry level
-    const entryPrice = parsePrice(plan.entry_zone);
-    if (entryPrice) {
-      const entryLine = seriesInstanceRef.current.createPriceLine({
-        price: entryPrice,
-        color: '#10b981',
-        lineWidth: 2,
-        lineStyle: 0, // Solid
-        axisLabelVisible: true,
-        title: 'ENTRY ZONE',
-      });
-      priceLinesRef.current.push(entryLine);
-    }
-
-    // Stop loss
-    const slPrice = parsePrice(plan.stop_loss);
-    if (slPrice) {
-      const slLine = seriesInstanceRef.current.createPriceLine({
-        price: slPrice,
-        color: '#f43f5e',
-        lineWidth: 2,
-        lineStyle: 2, // Dashed
-        axisLabelVisible: true,
-        title: 'STOP LOSS',
-      });
-      priceLinesRef.current.push(slLine);
-    }
-
-    // Target 1
-    const tp1Price = parsePrice(plan.take_profit_1);
-    if (tp1Price) {
-      const tp1Line = seriesInstanceRef.current.createPriceLine({
-        price: tp1Price,
-        color: '#38bdf8',
-        lineWidth: 2,
-        lineStyle: 1, // Dotted
-        axisLabelVisible: true,
-        title: 'TARGET 1',
-      });
-      priceLinesRef.current.push(tp1Line);
-    }
-
-    // Target 2
-    const tp2Price = parsePrice(plan.take_profit_2);
-    if (tp2Price) {
-      const tp2Line = seriesInstanceRef.current.createPriceLine({
-        price: tp2Price,
-        color: '#818cf8',
-        lineWidth: 2,
-        lineStyle: 1, // Dotted
-        axisLabelVisible: true,
-        title: 'TARGET 2',
-      });
-      priceLinesRef.current.push(tp2Line);
     }
   };
 
@@ -168,8 +221,11 @@ export default function Dashboard() {
         if (data.llm_status) {
           setAiStatus(data.llm_status);
         }
-        if (data.analysis?.master_plan) {
-          updateChartOverlays(data.analysis.master_plan);
+        if (data.analysis?.structure?.high_probability_zones) {
+          setHtfZones(data.analysis.structure.high_probability_zones);
+          renderChartOverlays(data.analysis.master_plan, data.analysis.structure.high_probability_zones);
+        } else {
+          renderChartOverlays(data.analysis?.master_plan, htfZones);
         }
       }
     } catch (err) {
@@ -216,7 +272,7 @@ export default function Dashboard() {
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { color: '#090d16' }, // deep sleek dark
+        background: { color: '#090d16' },
         textColor: '#94a3b8',
       },
       grid: {
@@ -224,7 +280,7 @@ export default function Dashboard() {
         horzLines: { color: '#131b2e' },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 440,
+      height: 460,
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
@@ -260,6 +316,11 @@ export default function Dashboard() {
     fetchMarketCandles(ticker, timeframe);
     fetchAnalysis(ticker);
   }, [ticker, timeframe]);
+
+  // Re-render overlays when showOverlays toggle changes
+  useEffect(() => {
+    renderChartOverlays(analysis?.master_plan, htfZones);
+  }, [showOverlays]);
 
   const hasActiveLLM = aiStatus?.gemini_configured || aiStatus?.openai_configured;
 
@@ -424,6 +485,112 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* High-Probability Institutional Structure HUD Bar */}
+        {htfZones && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-widest text-white flex items-center gap-1.5">
+                  <span className="text-purple-400">💎</span> High-Probability HTF Key Levels
+                </span>
+                <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded font-mono">
+                  Filtered (D1 / H4 Priority)
+                </span>
+              </div>
+              
+              <button
+                onClick={() => setShowOverlays(!showOverlays)}
+                className={`text-xs px-3 py-1 rounded-xl font-bold transition flex items-center gap-1.5 ${
+                  showOverlays 
+                    ? 'bg-purple-600/20 text-purple-300 border border-purple-500/40' 
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}
+              >
+                <span>{showOverlays ? '👁️' : '🙈'}</span>
+                <span>{showOverlays ? 'Chart Overlays: ON' : 'Chart Overlays: OFF'}</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
+              {/* DOL Target Card */}
+              <div className="bg-slate-950/70 p-3 rounded-xl border border-purple-500/30">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-slate-400 font-sans text-[11px] flex items-center gap-1">
+                    <span>🎯</span> Draw On Liquidity (DOL)
+                  </span>
+                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 rounded">
+                    {htfZones.dol?.type || "Target"}
+                  </span>
+                </div>
+                <div className="text-purple-300 font-bold text-sm">
+                  {htfZones.dol?.price?.toLocaleString() || "Evaluating..."}
+                </div>
+                <span className="text-[10px] text-slate-500 truncate block mt-0.5 font-sans">
+                  {htfZones.dol?.title || "HTF Target Target"}
+                </span>
+              </div>
+
+              {/* High Probability Order Block Card */}
+              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-slate-400 font-sans text-[11px] flex items-center gap-1">
+                    <span>📦</span> HTF Order Block
+                  </span>
+                  <span className={`text-[10px] px-1.5 rounded font-bold ${
+                    htfZones.order_block?.type?.includes('BEARISH') ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
+                  }`}>
+                    {htfZones.order_block?.status || "FRESH"}
+                  </span>
+                </div>
+                <div className="text-white font-bold text-sm">
+                  {htfZones.order_block ? `${htfZones.order_block.bottom} - ${htfZones.order_block.top}` : "None in range"}
+                </div>
+                <span className="text-[10px] text-slate-500 truncate block mt-0.5 font-sans">
+                  {htfZones.order_block?.title || "Filtered for HTF confluence"}
+                </span>
+              </div>
+
+              {/* High Probability FVG Card */}
+              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-slate-400 font-sans text-[11px] flex items-center gap-1">
+                    <span>⚡</span> HTF Fair Value Gap
+                  </span>
+                  <span className="text-[10px] bg-sky-500/20 text-sky-400 px-1.5 rounded font-bold">
+                    UNMITIGATED
+                  </span>
+                </div>
+                <div className="text-sky-300 font-bold text-sm">
+                  {htfZones.fvg ? `${htfZones.fvg.bottom} - ${htfZones.fvg.top}` : "None in range"}
+                </div>
+                <span className="text-[10px] text-slate-500 truncate block mt-0.5 font-sans">
+                  {htfZones.fvg?.title || "Fresh institutional imbalance"}
+                </span>
+              </div>
+
+              {/* Market Regime Card */}
+              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-slate-400 font-sans text-[11px] flex items-center gap-1">
+                    <span>⚖️</span> HTF Market Regime
+                  </span>
+                  <span className={`text-[10px] px-1.5 rounded font-bold ${
+                    htfZones.regime === 'DISCOUNT' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                  }`}>
+                    {htfZones.regime}
+                  </span>
+                </div>
+                <div className="text-white font-bold text-sm">
+                  {htfZones.regime === 'DISCOUNT' ? "Discount Accumulation" : "Premium Distribution"}
+                </div>
+                <span className="text-[10px] text-slate-500 truncate block mt-0.5 font-sans">
+                  Relative to Equilibrium (50%)
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TradingView Chart Container with Timeframe Controls */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
           <div className="flex flex-wrap justify-between items-center mb-3 px-2 gap-3">
@@ -573,7 +740,7 @@ export default function Dashboard() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                    <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]"></div>
                     <h2 className="text-lg font-bold text-white">Structure Engine</h2>
                   </div>
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-mono">

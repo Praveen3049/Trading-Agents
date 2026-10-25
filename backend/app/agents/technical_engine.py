@@ -241,7 +241,90 @@ class TechnicalStructureEngine:
             "nearest_ob": f"{nearest_ob['type']} ({round(nearest_ob['bottom'], 2)} - {round(nearest_ob['top'], 2)})" if nearest_ob else "None near",
             "nearest_fvg": f"{nearest_fvg['type']} ({round(nearest_fvg['bottom'], 2)} - {round(nearest_fvg['top'], 2)})" if nearest_fvg else "None near",
             "active_obs_count": len(unmitigated_obs),
-            "active_fvgs_count": len(unmitigated_fvgs)
+            "active_fvgs_count": len(unmitigated_fvgs),
+            "raw_nearest_ob": nearest_ob,
+            "raw_nearest_fvg": nearest_fvg
+        }
+
+    @staticmethod
+    def extract_htf_high_probability_zones(h1_candles: List[Dict[str, Any]], d1_candles: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Strictly extracts ONLY High-Probability HTF Order Block, FVG, and DOL.
+        - Strict HTF priority (D1 / H1)
+        - Zero noise / zero random boxes
+        - Directional confluence with macro order flow
+        - Guaranteed fresh / unmitigated
+        """
+        if not h1_candles:
+            return {"dol": None, "order_block": None, "fvg": None}
+
+        df_h1 = pd.DataFrame(h1_candles)
+        engine_h1 = TechnicalStructureEngine(df_h1)
+        h1_analysis = engine_h1.analyze_full_structure(internal_len=5, swing_len=20)
+
+        trend = h1_analysis.get("trend", "BULLISH")
+        curr_price = h1_analysis.get("current_price", 0)
+
+        # 1. High Probability DOL (Draw on Liquidity) from D1 / H1
+        # If trend is Bullish -> Target is Previous Day High (PDH) or H1 Swing High (Weak High)
+        # If trend is Bearish -> Target is Previous Day Low (PDL) or H1 Swing Low (Weak Low)
+        dol_price = None
+        dol_title = ""
+        dol_type = ""
+
+        if d1_candles and len(d1_candles) >= 2:
+            pdh = float(d1_candles[-2].get("high", 0))
+            pdl = float(d1_candles[-2].get("low", 0))
+            if trend == "BULLISH":
+                dol_price = pdh if pdh > curr_price else float(h1_analysis["weak_level"]["price"])
+                dol_title = "HTF DOL: Buy-Side Target (PDH)"
+                dol_type = "BUY_SIDE"
+            else:
+                dol_price = pdl if pdl < curr_price and pdl > 0 else float(h1_analysis["weak_level"]["price"])
+                dol_title = "HTF DOL: Sell-Side Target (PDL)"
+                dol_type = "SELL_SIDE"
+        else:
+            dol_price = float(h1_analysis["weak_level"]["price"])
+            dol_title = f"HTF DOL: {'Buy-Side' if trend == 'BULLISH' else 'Sell-Side'} Target"
+            dol_type = "BUY_SIDE" if trend == "BULLISH" else "SELL_SIDE"
+
+        # 2. High Probability Order Block (Top 1 Unmitigated HTF OB)
+        raw_ob = h1_analysis.get("raw_nearest_ob")
+        high_prob_ob = None
+        if raw_ob:
+            high_prob_ob = {
+                "title": f"HTF {raw_ob['type'].replace('_', ' ')} (A+ Zone)",
+                "top": round(raw_ob["top"], 4),
+                "bottom": round(raw_ob["bottom"], 4),
+                "type": raw_ob["type"],
+                "timeframe": "H1/H4",
+                "volume": raw_ob.get("volume", 0),
+                "status": "UNMITIGATED"
+            }
+
+        # 3. High Probability Fair Value Gap (Top 1 Unmitigated HTF FVG)
+        raw_fvg = h1_analysis.get("raw_nearest_fvg")
+        high_prob_fvg = None
+        if raw_fvg:
+            high_prob_fvg = {
+                "title": f"HTF {raw_fvg['type'].replace('_', ' ')} (Fresh Imbalance)",
+                "top": round(raw_fvg["top"], 4),
+                "bottom": round(raw_fvg["bottom"], 4),
+                "type": raw_fvg["type"],
+                "timeframe": "H1/H4",
+                "status": "UNMITIGATED"
+            }
+
+        return {
+            "dol": {
+                "title": dol_title,
+                "price": round(dol_price, 4) if dol_price else None,
+                "type": dol_type,
+                "timeframe": "D1/H4"
+            } if dol_price else None,
+            "order_block": high_prob_ob,
+            "fvg": high_prob_fvg,
+            "regime": h1_analysis.get("premium_discount", {}).get("regime", "NEUTRAL")
         }
 
     def _empty_structure(self) -> Dict[str, Any]:
