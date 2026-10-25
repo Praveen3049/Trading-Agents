@@ -2,8 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+import pandas as pd
 from .agents.top_down_agent import TopDownAgent
 from .agents.crt_agent import CRTAgent
+from .agents.technical_engine import TechnicalStructureEngine
 from .services.llm_service import llm_service
 from .services.market_data_service import market_data_service
 from .core.config import settings
@@ -98,18 +100,33 @@ def run_analysis(data: MarketData):
     # Fetch real multi-timeframe statistics for the selected instrument
     mtf_context = market_data_service.get_multi_timeframe_context(data.ticker)
     
+    # Run GUARDEER PineScript Technical Structure Engine on active candles
+    candles_res = market_data_service.get_candles(data.ticker, data.timeframe, 150)
+    candles = candles_res.get("candles", [])
+    
+    if candles:
+        engine = TechnicalStructureEngine(pd.DataFrame(candles))
+        guardeer_analysis = engine.analyze_full_structure(internal_len=5, swing_len=20)
+    else:
+        guardeer_analysis = TechnicalStructureEngine(pd.DataFrame())._empty_structure()
+
     # Pass ticker and real technical structure to agents
     top_down = TopDownAgent(mtf_context, ticker=data.ticker).analyze()
-    crt = CRTAgent(mtf_context.get("M15", {}), top_down, ticker=data.ticker).validate_setup()
+    crt = CRTAgent(guardeer_analysis, top_down, ticker=data.ticker).validate_setup()
     
     technical_structure = {
-        "current_price": mtf_context.get("current_price"),
+        "current_price": guardeer_analysis.get("current_price") or mtf_context.get("current_price"),
+        "trend": guardeer_analysis.get("trend"),
+        "last_event": guardeer_analysis.get("last_event"),
         "d1": mtf_context.get("D1", {}).get("trend", "BULLISH"),
         "h4": mtf_context.get("H4", {}).get("trend", "BULLISH"),
         "h1": mtf_context.get("H1", {}).get("trend", "BEARISH"),
         "m15": mtf_context.get("M15", {}).get("trend", "BULLISH"),
-        "nearest_ob": mtf_context.get("M15", {}).get("nearest_ob", "N/A"),
-        "nearest_fvg": mtf_context.get("M15", {}).get("nearest_fvg", "N/A")
+        "nearest_ob": guardeer_analysis.get("nearest_ob"),
+        "nearest_fvg": guardeer_analysis.get("nearest_fvg"),
+        "strong_level": guardeer_analysis.get("strong_level"),
+        "weak_level": guardeer_analysis.get("weak_level"),
+        "regime": guardeer_analysis.get("premium_discount", {}).get("regime")
     }
     
     master_plan = llm_service.synthesize_master_plan(
@@ -124,9 +141,10 @@ def run_analysis(data: MarketData):
         "ticker": data.ticker,
         "llm_status": get_ai_status(),
         "market_info": {
-            "current_price": mtf_context.get("current_price"),
+            "current_price": technical_structure["current_price"],
             "pdh": mtf_context.get("D1", {}).get("pdh"),
             "pdl": mtf_context.get("D1", {}).get("pdl"),
+            "regime": technical_structure["regime"],
         },
         "analysis": {
             "master_plan": master_plan,
