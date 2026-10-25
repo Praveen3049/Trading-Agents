@@ -19,23 +19,26 @@ class BacktestEngine:
         period: str = "60d",
         rr_target: float = 2.0,
         apply_crt_filter: bool = True,
-        strategy_model: str = "crt_1am" # "crt_1am" | "crt_9am" | "london_ny" | "combined"
+        strategy_model: str = "crt_1am" # "crt_1am" | "crt_5am" | "crt_9am" | "combined"
     ) -> Dict[str, Any]:
         """
-        Executes an institutional bar-by-bar backtest:
-        - Strategy 1: 01:00 AM CRT (Episode 8 by Mado):
+        Executes an institutional bar-by-bar backtest grounded in Mado's 11-Episode CRT Master Playbook:
+        - Strategy 1: 01:00 AM CRT (Episode 8 & 9):
             * Asian 9 PM (21:00 NY) 4H reference range (High, Low, 50% Midpoint)
             * 01:00 AM NY manipulation purge tracking (turtle soup)
-            * 02:00 - 04:00 AM NY high-probability execution window
+            * 02:00 - 04:00 AM NY high-probability execution window (03:00-04:00 sweet spot)
             * M15 Model-1 confirmation (Market Structure Shift & Displacement)
             * Trailing Breakeven protection at +1.0R
-        - Strategy 2: 09:00 AM CRT (Episode 11 by Mado):
+        - Strategy 2: 05:00 AM CRT (Episode 10):
+            * Sweeps 01:00 AM London or 09:00 PM Asia range
+            * 06:00 - 08:30 AM NY high-probability execution window (London Lunch / Pre-NY)
+            * M15 Model-1 confirmation with SL at purge wick
+        - Strategy 3: 09:00 AM CRT (Episode 11):
             * 1 AM & 5 AM NY predecessor feeder candles
             * 09:00 AM NY opening price anchor (OLHC/OHLC accumulation/distribution)
             * 09:00 - 13:00 NY New York Killzone execution (09:30-10:30 sweet spot)
             * Sweeps of 1AM/5AM feeder extremes with M15 Model-1 confirmation
-        - Strategy 3: London & NY Killzone CRT (Asian session sweeps & FVGs)
-        - Strategy 4: Combined Institutional CRT Suite
+        - Strategy 4: Combined 24H Institutional CRT Suite
         """
         cfg = SUPPORTED_ASSETS.get(symbol.upper(), {"yf_symbol": symbol, "decimals": 2})
         yf_sym = cfg.get("yf_symbol", symbol)
@@ -84,6 +87,14 @@ class BacktestEngine:
         swept_9pm_high = False
         purge_low_wick = 9999999.0
         purge_high_wick = 0.0
+
+        # 5 AM CRT Variables: London 1 AM (01:00 - 05:00 NY) Range
+        ref_1am_high = 0.0
+        ref_1am_low = 9999999.0
+        swept_1am_low = False
+        swept_1am_high = False
+        purge_5am_low_wick = 9999999.0
+        purge_5am_high_wick = 0.0
 
         # 9 AM CRT Variables: 1 AM & 5 AM Predecessor Feeder Candles
         feeder_high = 0.0
@@ -210,6 +221,19 @@ class BacktestEngine:
                     ref_9pm_high = max(ref_9pm_high, curr_h)
                     ref_9pm_low = min(ref_9pm_low, curr_l)
 
+            # Build 1 AM NY London 4H Candle Range (hours 1 to 4 NY)
+            if 1 <= hour <= 4:
+                if hour == 1 and minute == 0:
+                    ref_1am_high = curr_h
+                    ref_1am_low = curr_l
+                    swept_1am_low = False
+                    swept_1am_high = False
+                    purge_5am_low_wick = 9999999.0
+                    purge_5am_high_wick = 0.0
+                else:
+                    ref_1am_high = max(ref_1am_high, curr_h)
+                    ref_1am_low = min(ref_1am_low, curr_l)
+
             # Build 9 AM CRT Feeder Ranges (1 AM & 5 AM NY candles, hours 1 to 8 NY)
             if 1 <= hour <= 8:
                 if hour == 1 and minute == 0:
@@ -228,7 +252,7 @@ class BacktestEngine:
                 open_9am = curr_o
 
             # -------------------------------------------------------------------
-            # STRATEGY MODEL A: 01:00 AM CRT MODEL (Episode 8 by Mado)
+            # STRATEGY MODEL A: 01:00 AM CRT MODEL (Episode 8 & 9 by Mado)
             # -------------------------------------------------------------------
             if strategy_model in ["crt_1am", "combined"]:
                 if hour == 1:
@@ -295,28 +319,23 @@ class BacktestEngine:
             # -------------------------------------------------------------------
             if strategy_model in ["crt_5am", "combined"]:
                 anchor_5am = 6 if "BTC" in symbol.upper() else 5
-                # 05:00 AM Window: 05:00 to 09:00 NY, Execution in 06:00-08:30 NY
-                if anchor_5am <= hour <= 8 and (ref_9pm_high > 0 or feeder_high > 0):
-                    ref_high_target = max(ref_9pm_high, feeder_high)
-                    ref_low_target = min(ref_9pm_low, feeder_low) if min(ref_9pm_low, feeder_low) > 0 else ref_9pm_low
+                if anchor_5am <= hour <= 8 and ref_1am_high > 0:
+                    if curr_h > ref_1am_high:
+                        swept_1am_high = True
+                        purge_5am_high_wick = max(purge_5am_high_wick, curr_h)
+                    if curr_l < ref_1am_low:
+                        swept_1am_low = True
+                        purge_5am_low_wick = min(purge_5am_low_wick, curr_l)
 
-                    if curr_h > ref_high_target:
-                        swept_feeder_high = True
-                        purge_high_wick = max(purge_high_wick, curr_h)
-                    if curr_l < ref_low_target:
-                        swept_feeder_low = True
-                        purge_low_wick = min(purge_low_wick, curr_l)
-
-                    # Only execute inside 06:00 - 08:30 NY high-probability window
+                    # High-probability execution window: 06:00 - 08:30 NY (London Lunch / Pre-NY)
                     if (hour == 6) or (hour == 7 and minute <= 45):
                         htf_trend_bull = curr_c >= sma50[i] if not np.isnan(sma50[i]) else True
                         htf_trend_bear = curr_c <= sma50[i] if not np.isnan(sma50[i]) else True
 
-                        # 5AM CRT LONG: Swept 1AM/9PM Low + M15 Model-1 Close back above
-                        if swept_feeder_low and curr_c > ref_low_target and purge_low_wick < ref_low_target and (not apply_crt_filter or htf_trend_bull):
+                        if swept_1am_low and curr_c > ref_1am_low and purge_5am_low_wick < ref_1am_low and (not apply_crt_filter or htf_trend_bull):
                             entry = curr_c
-                            sl_offset = (purge_low_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
-                            sl = purge_low_wick - sl_offset
+                            sl_offset = (purge_5am_low_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
+                            sl = purge_5am_low_wick - sl_offset
                             risk_dist = entry - sl
                             if risk_dist > 0 and (risk_dist / entry) < 0.02:
                                 tp = entry + (risk_dist * rr_target)
@@ -331,14 +350,13 @@ class BacktestEngine:
                                     "risk_dist": risk_dist,
                                     "setup_type": "05:00 AM CRT Bullish Purge & M15 Model-1 (Ep 10)"
                                 }
-                                swept_feeder_low = False
+                                swept_1am_low = False
                                 continue
 
-                        # 5AM CRT SHORT: Swept 1AM/9PM High + M15 Model-1 Close back below
-                        elif swept_feeder_high and curr_c < ref_high_target and purge_high_wick > ref_high_target and (not apply_crt_filter or htf_trend_bear):
+                        elif swept_1am_high and curr_c < ref_1am_high and purge_5am_high_wick > ref_1am_high and (not apply_crt_filter or htf_trend_bear):
                             entry = curr_c
-                            sl_offset = (purge_high_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
-                            sl = purge_high_wick + sl_offset
+                            sl_offset = (purge_5am_high_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
+                            sl = purge_5am_high_wick + sl_offset
                             risk_dist = sl - entry
                             if risk_dist > 0 and (risk_dist / entry) < 0.02:
                                 tp = entry - (risk_dist * rr_target)
@@ -353,7 +371,7 @@ class BacktestEngine:
                                     "risk_dist": risk_dist,
                                     "setup_type": "05:00 AM CRT Bearish Purge & M15 Model-1 (Ep 10)"
                                 }
-                                swept_feeder_high = False
+                                swept_1am_high = False
                                 continue
 
             # -------------------------------------------------------------------
@@ -414,77 +432,6 @@ class BacktestEngine:
                             }
                             swept_feeder_high = False
                             continue
-
-            # -------------------------------------------------------------------
-            # STRATEGY MODEL C: LONDON & NY KILLZONE CRT MODEL (02-05 & 08-11 NY)
-            # -------------------------------------------------------------------
-            if strategy_model in ["london_ny"]:
-                is_london = 2 <= hour <= 5
-                is_ny = 8 <= hour <= 11
-                if apply_crt_filter and not (is_london or is_ny):
-                    continue
-
-                sub_df = df.iloc[i - window_size : i]
-                sub_highs = sub_df['high'].values
-                sub_lows = sub_df['low'].values
-                sub_closes = sub_df['close'].values
-
-                range_high = sub_highs.max()
-                range_low = sub_lows.min()
-                equilibrium = (range_high + range_low) / 2.0
-
-                sma20 = sub_closes[-20:].mean()
-                is_bullish = curr_c > sma20 and curr_c > sub_closes[-4]
-                is_bearish = curr_c < sma20 and curr_c < sub_closes[-4]
-
-                has_swept_low = (curr_l < asian_low and curr_c > asian_low) if asian_low < 999999 else (curr_l < sub_lows[-10:].min())
-                has_swept_high = (curr_h > asian_high and curr_c < asian_high) if asian_high > 0 else (curr_h > sub_highs[-10:].max())
-
-                fvg_bull = False
-                fvg_bear = False
-                for k in range(len(sub_df) - 4, len(sub_df) - 1):
-                    if sub_lows[k] > sub_highs[k - 2] and sub_closes[k - 1] > sub_df['open'].iloc[k - 1]:
-                        fvg_bull = True
-                    elif sub_highs[k] < sub_lows[k - 2] and sub_closes[k - 1] < sub_df['open'].iloc[k - 1]:
-                        fvg_bear = True
-
-                if is_bullish and curr_c < equilibrium and (has_swept_low or fvg_bull):
-                    entry = curr_c
-                    sl = (range_low * 0.999) if "XAU" in symbol or "BTC" in symbol else (range_low - 0.0015)
-                    risk_dist = entry - sl
-                    if risk_dist > 0:
-                        tp = entry + (risk_dist * rr_target)
-                        active_trade = {
-                            "trade_num": len(trades) + 1,
-                            "entry_time": curr_time,
-                            "symbol": symbol,
-                            "direction": "BUY",
-                            "entry_price": round(entry, cfg["decimals"]),
-                            "stop_loss": round(sl, cfg["decimals"]),
-                            "take_profit": round(tp, cfg["decimals"]),
-                            "risk_dist": risk_dist,
-                            "setup_type": "London/NY CRT Bullish Sweep & FVG"
-                        }
-                        continue
-
-                elif is_bearish and curr_c > equilibrium and (has_swept_high or fvg_bear):
-                    entry = curr_c
-                    sl = (range_high * 1.001) if "XAU" in symbol or "BTC" in symbol else (range_high + 0.0015)
-                    risk_dist = sl - entry
-                    if risk_dist > 0:
-                        tp = entry - (risk_dist * rr_target)
-                        active_trade = {
-                            "trade_num": len(trades) + 1,
-                            "entry_time": curr_time,
-                            "symbol": symbol,
-                            "direction": "SELL",
-                            "entry_price": round(entry, cfg["decimals"]),
-                            "stop_loss": round(sl, cfg["decimals"]),
-                            "take_profit": round(tp, cfg["decimals"]),
-                            "risk_dist": risk_dist,
-                            "setup_type": "London/NY CRT Bearish Sweep & FVG"
-                        }
-                        continue
 
         # Performance Statistics
         total_trades = len(trades)
