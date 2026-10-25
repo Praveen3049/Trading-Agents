@@ -1,0 +1,62 @@
+Here is a comprehensive, structured extraction of the institutional trading model presented in **CRT 2026 Mentorship EP 6 | TSQ + 4h Candle Range** by Mado:
+
+---
+
+### 1. Video Title & Episode Number / Topic
+* **Title / Series:** CRT 2026 Mentorship
+* **Episode:** EP 6
+* **Topic:** **TSQ (Turtle Souping Quick / Turtle Soup Quality Framework) + 4H Candle Range Execution.** How to use Higher Time Frame (HTF) TSQ setups to frame and execute Lower Time Frame (LTF) trade ideas.
+
+---
+
+### 2. Core Strategy Concept
+* **HTF to LTF Algorithmic Mapping:** Bridging Monthly/Daily structural candles with 4-Hour (4H) and 1-Hour (1H) range mechanics.
+* **The Anatomy of a Candle:** Understanding that higher timeframe candles (Monthly/Weekly) are not random; they follow an expansion sequence (Open $\rightarrow$ Expansion into Key Level $\rightarrow$ Retracement/Purge $\rightarrow$ Close). 
+* **TSQ Lifecycle Integration:** The 6 phases of TSQ (1. Turtle Soup $\rightarrow$ 2. Model-1 $\rightarrow$ 3. Breaker Block $\rightarrow$ 4. OTE $\rightarrow$ 5. Kiss of Death $\rightarrow$ 6. Turtle Soup). Mado explicitly focuses on **Phase 1 (Turtle Soup)**, **Phase 2 (Model-1)**, and **Phase 5 (Kiss of Death)**.
+
+---
+
+### 3. Timeframes, Session Timings & Key Ranges
+* **Higher Timeframe Anchor:** Monthly / Daily charts to establish the overarching Draw on Liquidity (DOL) and key unmitigated Fair Value Gaps (FVG) or premium/discount arrays.
+* **Execution Timeframe:** 4-Hour (4H) and 1-Hour (1H) for structural confirmation and entries.
+* **Session Filters:** Asia range / 9:00 PM range used to frame 4H candles and identify liquidity raids before London/New York session expansions.
+* **Weekly Profile Mapping:** 
+  * Monday = Opening Range / Consolidation.
+  * Tuesday = Manipulation.
+  * Wednesday / Thursday = True Expansion.
+  * Friday = Retracement (TGIF).
+
+---
+
+### 4. Structural Setup Mechanics
+1. **HTF Liquidity Sweep (Turtle Soup):** Price takes out a major high or low (e.g., Monthly/Daily old high) and immediately closes back inside the range. This confirms a valid Turtle Soup (Phase 1).
+2. **Candle Range Definition (CRH / CRL):** The specific range of the candle that executed the sweep becomes the reference zone.
+3. **LTF Order Block / FVG Alignment:** Within the 4H timeframe, look for 4H Fair Value Gaps or Order Blocks/Propulsion Blocks aligned inside the HTF candle range.
+4. **Model-1 Shift:** A displacement on lower timeframes that breaks a short-term swing structure, confirming the shift in algorithmic delivery.
+
+---
+
+### 5. Entry Triggers & Model Confirmations
+* **Rule of Patience:** Do not jump into a Turtle Soup blind. Wait for **confirmation**—price must sweep the liquidity level and close back inside.
+* **The 4H / 1H Tap:** Wait for LTF price action during specific killzones (Asia/London open) to tap into the 4H FVG or Order Block (Breaker/Kiss of Death).
+* **Model-1 Trigger:** Look for a 4H/1H market structure shift (MSS) closing below/above the manipulation candle that purged the liquidity.
+
+---
+
+### 6. Invalidation & Stop Loss Rules
+* **Stop Loss Placement:** Placed safely beyond the extreme wick of the HTF/LTF turtle soup manipulation high/low or above the 4H order block boundary.
+* **Time-Based Invalidation:** If price fails to deliver toward the intended DOL within the expected session window (e.g., failing to expand post-Tuesday manipulation), the setup is invalidated.
+
+---
+
+### 7. Target / Draw on Liquidity (DOL) & Risk Management
+* **Targets:** Internal range liquidity, opposing 4H/Daily FVG arrays, or the opposite end of the HTF candle range (e.g., from the high sweep down to the candle's low or midpoint equilibrium).
+* **Risk Discipline:** Trading is 90% patience and waiting. Only execute when HTF candle phases align perfectly with LTF range execution models.
+
+---
+
+### 8. Concrete Algorithmic Rules to add to our Unified CRT Engine
+1. *If a Higher Timeframe (Monthly/Daily) candle sweeps a key premium/discount FVG and closes back inside, tag it as **HTF Phase 1: Turtle Soup**.*
+2. *Map the exact High/Low range of the sweeping candle as the primary structural boundary for LTF execution.*
+3. *Do not execute on the initial sweep; wait for LTF (4H/1H) confirmation via a Market Structure Shift (Model-1) or a retracement into a 4H Order Block / FVG (Kiss of Death).*
+4. *Incorporate time-of-week filters: Avoid direct directional expansion entries on Monday candles; wait for Tuesday/Wednesday profile confirmation (Weekly Profile: Mon Open, Tue Manipulation, Wed/Thu Expansion).*

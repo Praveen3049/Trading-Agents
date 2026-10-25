@@ -1,0 +1,84 @@
+Here is a comprehensive breakdown of the institutional trading model presented in **CRT 2026 Mentorship EP 7 | Daily Range + Time by Mado**:
+
+---
+
+### 1. Video Title & Episode Number / Topic
+* **Title:** CRT 2026 Mentorship EP 7
+* **Topic:** *Exploit Daily Range with TSQ + Kill Zones* (Integrating Turtle Soup (TSQ) and Daily Range Time Windows across different market sessions).
+
+---
+
+### 2. Core Strategy Concept
+* Combining **Daily Range** frameworks with **Kill Zones (TSQ)**. 
+* Moving away from random candle-by-candle watching to understanding *when* institutional volume and algorithmic manipulation occur. 
+* Phases (Turtle Soup, Model-1, Breaker, OTE, Kiss of Death) do not occur randomly throughout the day; they line up with specific session time windows (Asia, London Open, London Lunch, New York Open/AM/PM).
+
+---
+
+### 3. Session Timings & Key Ranges (EST)
+
+#### **For Forex:**
+* **Asian Session:** 08:00 PM – 00:00 AM (Initial range formation, consolidation, sets stage)
+* **London Open:** 02:00 AM – 05:00 AM (First real manipulation, sweeps Asia liquidity)
+* **London Lunch:** 05:00 AM – 07:00 AM (Quieter window / pause before NY)
+* **New York Open:** 07:00 AM – 10:00 AM (Real expansion and delivery of the day's move)
+* **London Close:** 10:00 AM – 12:00 PM (Tail end of move or reversal setup)
+
+#### **For Indices (S&P/Nasdaq/Dow):**
+* **Asian Session:** 08:00 PM – 00:00 AM
+* **London Open:** 02:00 AM – 05:00 AM
+* **New York AM:** 08:30 AM – 11:00 AM (Institutional volume window)
+* **New York PM:** 01:00 PM – 04:00 PM (Institutional volume window)
+
+---
+
+### 4. Structural Setup Mechanics
+* **Asia:** Builds consolidation range and liquidity pools (highs/lows).
+* **London:** Sweeps Asian liquidity (Turtle Soup) to trap retail traders, creating institutional intent.
+* **New York:** Expands into the true Draw on Liquidity (DOL) and provides entry retracements (OTE / Breakers).
+
+---
+
+### 5. Entry Triggers & Four Core Scenarios
+
+#### **Scenario 1: Classic London Turtle Soup + NY OTE Entry**
+* **Asia:** Builds consolidation range.
+* **London:** Sweeps Asian liquidity to form a Turtle Soup (TS).
+* **New York:** Price expands, then retraces into the **62% – 79% OTE Zone** in alignment with London's directional bias.
+* *Trigger:* Entry inside OTE confirmed by London TS direction.
+
+#### **Scenario 2: London Turtle Soup & Breaker + New York Kiss of Death (KOD)**
+* **Asia:** Builds range.
+* **London:** Sweeps liquidity (**Turtle Soup** + **Breaker** formed).
+* **New York:** Price expands hard, giving a false move / **Kiss of Death (KOD)** right before the real expansion toward DOL.
+* *Trigger:* Trade the continuation after the KOD trap clears in New York.
+
+#### **Scenario 3: Asian Session Turtle Soup (Skip London)**
+* **Asia:** Forms the Turtle Soup / High-Low of the day during the Asian session itself.
+* **London:** Continues the directional move.
+* **New York:** Fully expands in the new direction.
+* *Rule:* Avoid London session if manipulation already occurred in Asia; wait for NY confirmation.
+
+#### **Scenario 4: Asia & London Consolidation + New York Expansion**
+* **Asia & London:** Both sessions act as a tight, combined consolidation range (no major TS or Breaker).
+* **New York Open:** Triggers everything—Turtle Soup, Breaker, and Full Expansion occur tightly inside the NY window.
+* *Rule:* First two sessions are observation-only; let NY deliver the engineered liquidity.
+
+---
+
+### 6. Invalidation & Stop Loss Rules
+* Place stop loss beyond the manipulated swing high/low (Turtle Soup level).
+* **Time-based invalidation:** If the expected expansion model does not trigger within the active Kill Zone window (e.g., NY AM), step aside—do not force trades outside institutional time filters.
+
+---
+
+### 7. Target / Draw on Liquidity (DOL) & Risk Management
+* **Targets:** Higher timeframe liquidity pools, external range liquidity (ERL), or internal FVG arrays.
+* **Discipline:** Do not trade every single day. Wait for timing and structure to align (Time + Price confluence).
+
+---
+
+### 8. Concrete Algorithmic Rules for Unified CRT Engine
+1. **Time Filter Enforcement:** Never trade outside the defined Kill Zone windows (Asia, London Open, NY AM/PM) for the specific asset class (Forex vs. Indices).
+2. **Phase Confluence Mapping:** Categorize every session into its mechanical role: *Asia (Build)* $\rightarrow$ *London (Manipulate / TS)* $\rightarrow$ *New York (Expand / DOL)*.
+3. **Model Alignment:** Only take setups where structural patterns (TS, Breaker, OTE, KOD) match the specific timing window rules outlined in Scenarios 1–4.

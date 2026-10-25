@@ -1,0 +1,76 @@
+Here is a comprehensive, structured breakdown of the institutional trading model presented in **'CRT 2026 Mentorship Ep 4 | TSQ + Phases by Mado'**:
+
+---
+
+### 1. Video Title & Episode Number / Topic
+* **Title:** CRT 2026 Mentorship Ep 4
+* **Topic:** **TSQ (The Sequence)** and its **5–6 phases** within a CRT (Candle Range Theory) framework. Explores how price moves step-by-step between liquidity pools and key reference points.
+
+---
+
+### 2. Core Strategy Concept
+* **TSQ (The Sequence):** The multi-phase lifecycle of price delivery that unfolds between a CRT purge and a Draw on Liquidity (DOL). It provides structural timing, sequencing, and confidence to align with institutional order flow.
+* **Core Philosophy:** *“You don’t need to predict; you just need to read.”* TSQ maps out how smart money manipulates retail traders, traps liquidity, shifts structure, and expands into targets.
+
+---
+
+### 3. Timeframes, Session Timings & Key Ranges
+* **Top-Down Timeframe Alignment (CRT & TSQ in Harmony):**
+  * **Weekly CRT** $\rightarrow$ Observed on **H4** TSQ
+  * **Daily CRT** $\rightarrow$ Observed on **H1** TSQ
+  * **H4 CRT** $\rightarrow$ Observed on **M15** TSQ
+  * **H1 CRT** $\rightarrow$ Observed on **M5** TSQ
+* **Reference Points:** TSQ can be applied inside a CRT range, between a Key Level and DOL, or from CRT High to CRT Low (and vice versa) using OHLC/OLHC candle structures.
+
+---
+
+### 4. Structural Setup Mechanics (The 5–6 Phases of TSQ)
+
+1. **Phase 1: Turtle Soup (TS)**
+   * **Origin:** Named after the 1980s trading group (*The Turtles*) who traded breakouts. TSQ does the *opposite*: it looks for **failed breakouts** (false breakouts) where price sweeps old highs/lows (CRT highs/lows), traps retail liquidity, and aggressively reverses.
+   * *Bullish TS:* CRT Low is purged $\rightarrow$ Price rejects upward.
+   * *Bearish TS:* CRT High is purged $\rightarrow$ Price rejects downward.
+
+2. **Phase 2: Model-1 (The Engine & Confirmation)**
+   * **Role:** The confirmation engine. After a Turtle Soup purge, price stabilizes and prints a specific candle (Order Block) that closes above/below the CRT purge level.
+   * **Significance:** Signals that smart money has stepped in and expansion has begun.
+
+3. **Phase 3: Breaker Block (BRK / True Market Structure Shift)**
+   * **Role:** The re-accumulation / structural shift phase. Price pushes away, breaks internal structure, and re-tests the last opposing candle before the expansion.
+   * **Significance:** Exposes where dumb money got trapped and where smart money shifted control. Often provides clean re-test entries.
+
+4. **Phase 4: Optimal Trade Entry (OTE)**
+   * **Role:** The retracement sweet spot. After a displacement leg, price retraces into the **60% to 75% Fibonacci retracement zone** (aligned with order blocks/FVGs).
+   * **Significance:** Where institutional re-fueling happens before the main continuation leg.
+
+5. **Phase 5: Kiss of Death / Redistribution (KOD)**
+   * **Role:** The final trap before reaching the true target. Often manifests as a "fake" final turtle soup right before price delivers into the ultimate Draw on Liquidity (DOL).
+
+---
+
+### 5. Entry Triggers & Model Confirmations
+* **Model-1 Entry:** Enter immediately on the candle close that violates the CRT purge level following a Turtle Soup sweep.
+* **Breaker Re-test Entry:** Wait for price to pull back to the breaker block (BRK) following a market structure shift.
+* **OTE Confirmation:** Look for a lower-timeframe CRT candle, TS, or micro Model-1 inside the 60%–75% Fibonacci zone.
+
+---
+
+### 6. Invalidation & Stop Loss Rules
+* **For Buys (Bullish TSQ):** Stop loss is placed strictly **below the protected swing low** / Turtle Soup low.
+* **For Sells (Bearish TSQ):** Stop loss is placed strictly **above the protected swing high** / Turtle Soup high.
+* **Invalidation:** If price closes past the structural anchor (CRT extreme) without respecting the Model-1 candle close, the sequence fails.
+
+---
+
+### 7. Target / Draw on Liquidity (DOL) & Risk Management
+* **Targets:** The next higher-timeframe liquidity pool (equal highs/lows) or the opposing CRT high/low.
+* **Execution:** Patience is key. Not every sequence prints all 5 phases; aggressive markets may only print **Turtle Soup $\rightarrow$ Model-1**, while complex markets utilize **Breaker Blocks and OTE**.
+
+---
+
+### 8. Concrete Algorithmic Rules for Unified CRT Engine
+1. **Trigger Condition:** Identify higher-timeframe CRT High (CRH) or CRT Low (CRL).
+2. **Purge Detection:** Verify a sweep of that level (Turtle Soup execution).
+3. **Confirmation Validation:** Wait for a candle close across the internal dealing range (Model-1 activation).
+4. **Refinement:** Monitor for secondary retracement zones (Breaker Block or 60%–75% OTE Fibonacci pocket).
+5. **Execution:** Fire entry only when timeframe alignment rules (e.g., Daily CRT $\rightarrow$ H1 TSQ) are fully synchronized.

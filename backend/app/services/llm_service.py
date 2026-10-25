@@ -145,11 +145,15 @@ Provide your institutional evaluation in strict JSON format:
         }
 
     def analyze_crt(self, ticker: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Uses LLM to evaluate Candle Range Theory (CRT) setups (1AM, 5AM, 9AM models)."""
+        """Uses LLM to evaluate Candle Range Theory (CRT) setups grounded in Mado's 11-Episode Master Playbook."""
         system_instruction = (
-            "You are a specialized Candle Range Theory (CRT) Agent based on the official CRT & TS Guides. "
-            "Your job is to detect Candle Range setups (Accumulation -> Manipulation/Sweep -> Distribution/Expansion), "
-            "evaluate timing sessions (1AM, 5AM, 9AM models), and confirm whether institutional manipulation has completed. "
+            "You are an elite Institutional Candle Range Theory (CRT) Agent grounded in Mado's 2026 CRT Curriculum. "
+            "Your framework: Liquidity + Time + Price = Time-Based Ranges. "
+            "You evaluate: "
+            "1. Session Timing: 01:00 AM CRT (London), 05:00 AM CRT (Pre-NY / Lunch), or 09:00 AM CRT (NY Open). "
+            "2. Model-1 Dual Condition: Confirm price both purged external liquidity (CRH/CRL) AND rebalanced an FVG/OB. "
+            "3. 4-Quarter Lifecycle & Confluence: Identify whether price is in Quarter 2 (Manipulation) or Quarter 3 (Breaker + OTE retracement). "
+            "4. Closes confirm: Ensure candle close confirms displacement; invalidate if price consolidates after a purge. "
             "Always return ONLY valid JSON matching the requested keys."
         )
         

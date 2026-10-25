@@ -1,0 +1,63 @@
+Here is a complete, structured institutional trading model breakdown based on Episode 5 of the CRT 2026 Mentorship:
+
+---
+
+### 1. Video Title & Episode Number / Topic
+* **Title:** CRT 2026 Mentorship Ep 5 | TSQ + OHLC/OLHC
+* **Core Topic:** Turtle Soup Quality (TSQ) inside Open High Low Close (OHLC) & Open Low High Close (OLHC) candle structures, time-frame alignment, and algorithmic execution phases.
+
+---
+
+### 2. Core Strategy Concept
+* **TSQ + OHLC/OLHC Integration:** Every higher timeframe candle (Monthly, Weekly, Daily, 4H) unfolds on lower timeframes via specific algorithmic phases: Liquidity Build-up $\rightarrow$ Turtle Soup (Manipulation/Sweep) $\rightarrow$ Displacement/Expansion $\rightarrow$ Breaker Block Retest (OTE).
+* **Timeframe Alignment:** Higher timeframe (HTF) provides **Direction / Bias**, while Lower Timeframe (LTF) provides **Execution / Precision**.
+* **The "Kiss of Death":** Deep retracement phase (OTE) before the final terminal candle expansion to cap the higher timeframe candle.
+
+---
+
+### 3. Timeframes, Session Timings & Key Ranges
+* **Timeframe Hierarchy:** 
+  * Monthly (M) $\to$ Daily (D) TSQ
+  * Weekly (W) $\to$ 4-Hour (4H) TSQ
+  * Daily (D) $\to$ 1-Hour (1H) TSQ
+* **Monthly Candle Breakdown (4-Week Cycle):**
+  * **Week 1:** Range / Liquidity build-up
+  * **Week 2:** Manipulation / Turtle soup + Expansion
+  * **Week 3:** OTE / Kiss of death (Deep retracement)
+  * **Week 4:** Final turtle soup / Candle capping
+
+---
+
+### 4. Structural Setup Mechanics (Bullish OHLC Example)
+1. **Open:** Candle opens.
+2. **Liquidity Build-up / Turtle Soup (TS):** Price sweeps a short-term low (generates liquidity, then triggers a Turtle Soup on the HTF wick/low). *Real displacement must follow immediately—no consolidation.*
+3. **Displacement / Expansion:** Aggressive price movement upward, breaking the short-term high to show institutional intent.
+4. **Market Structure Shift (MSS) / FVG Fill:** Price breaks structure, fills Fair Value Gaps, and confirms a shift in momentum.
+5. **Breaker Block Phase:** Price pulls back to retest the Breaker Block zone combined with the Optimal Trade Entry (OTE / Fibonacci 0.618–0.786 levels).
+
+---
+
+### 5. Entry Triggers & Model Confirmations
+* **Candle Close Confirmation:** *“Closes tell the truth, wicks lie, closes confirm.”*
+* **Confirmation Rule:** A valid candle close **above** a short-term high (for bullish setup) confirms the Turtle Soup is genuine.
+* **Confluence Entry (High Probability Zone):** When a **Breaker Block** and an **OTE (Fibonacci 0.618–0.786)** align at the same time on the lower timeframe, it forms the highest probability entry zone (**Breaker + OTE = Strong Continuation**).
+
+---
+
+### 6. Invalidation & Stop Loss Rules
+* **Invalidation:** If price fails to close above/below the key structural level after sweeping liquidity, the Turtle Soup is flagged as failed.
+* **Stop Loss Placement:** Placed tight just beyond the sweep wick or lower timeframe breaker block invalidation level. Higher timeframe alignment allows for smaller stops and drastically higher risk-to-reward ratios.
+
+---
+
+### 7. Target / Draw on Liquidity (DOL) & Risk Management
+* **Draw on Liquidity (DOL):** Targets are set at opposing Higher Timeframe Range Highs/Liquidity Pools.
+* **Risk Management:** Utilizing LTF execution on HTF bias ensures smaller risk parameters (smaller stop loss) while capturing macro expansion phases.
+
+---
+
+### 8. Concrete Algorithmic Rules to add to our Unified CRT Engine
+1. **Always verify HTF Bias before LTF execution:** Never trade an LTF Turtle Soup blindly against the Monthly/Weekly candle phase.
+2. **Displacement is mandatory after TS:** If price sweeps liquidity and lingers/consolidates, invalidate the setup. True intent shows via rapid displacement.
+3. **The Power Confluence:** Execute exclusively when **Breaker Block + OTE (0.618 - 0.786)** overlap on the lower timeframe execution chart.
+4. **Close Validation Rule:** Only take action after a confirmed candle close *beyond* the manipulated liquidity swing point.

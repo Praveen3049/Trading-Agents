@@ -1,0 +1,76 @@
+Here is a comprehensive, structured institutional trading model breakdown of **CRT 2026 Mentorship Ep 1: Candle Range Theory** by Mado:
+
+---
+
+### 1. Video Title & Episode Number / Topic
+* **Title:** CRT 2026 Mentorship Ep 1 | Candle Range Theory
+* **Topic:** Introduction to Candle Range Theory (CRT) fundamentals, defining the integration of **Liquidity + Time + Price**, comparing conventional ranges vs. objective candle ranges, and examining CRT variations (Three-Candle, Two-Candle, Inside Bars, Outside Bars) combined with Higher Timeframe (HTF) Key Levels.
+
+---
+
+### 2. Core Strategy Concept
+* **Candle Range Theory (CRT):** Every single candlestick on any timeframe is not just a random shape; it represents a **time-based range** possessing an open, high, low, and close. 
+* **The Unified Engine:** CRT wraps three immutable market elements into one system:
+$$\text{Liquidity} + \text{Time} + \text{Price} = \text{Time-Based Ranges}$$
+* **Market Behavior Cycle:** Markets move from liquidity to liquidity via three sequential phases: **Accumulation (Range formation) $\rightarrow$ Manipulation (Turtle Soup / Liquidity Raid) $\rightarrow$ Distribution / Expansion (Run to opposite side).**
+
+---
+
+### 3. Timeframes, Session Timings & Key Ranges
+* **Fractal Nature:** CRT applies universally across all timeframes (Weekly, Daily, 4-Hour, 1-Hour, Lower Timeframes). 
+* **Core Core-Model Examples (Time Templates):**
+  * **Weekly Chart:** Week 1 (Range) $\rightarrow$ Week 2 (Raid / Manipulation) $\rightarrow$ Week 3 (Distribution Run).
+  * **Daily Chart:** Monday (Range) $\rightarrow$ Tuesday (Raid) $\rightarrow$ Wednesday (Distribution).
+  * **4-Hour Chart:** 01:00 AM (Range) $\rightarrow$ 05:00 AM (Raid/Manipulation) $\rightarrow$ 09:00 AM (Distribution Run).
+
+---
+
+### 4. Structural Setup Mechanics
+* **Conventional Ranges vs. CRT Ranges:**
+  * *Conventional Ranges:* Inconsistent highs/lows, subjective open/close times, unclear targets, often guesswork.
+  * *CRT Ranges:* Objective, fixed highs and lows (CRH / CRL), fixed opening and closing times, clear structural boundaries.
+* **Range Boundaries & Liquidity Pools:**
+  * $\text{CRH (Candle Range High)} = \text{Buy-Side Liquidity}$
+  * $\text{CRL (Candle Range Low)} = \text{Sell-Side Liquidity}$
+* **Two Primary Range Outcomes:**
+  1. *True Break:* Price breaks above CRH or below CRL and continues in that direction.
+  2. *False Break (Turtle Soup / Foundation of CRT):* Price raids one side of the range (manipulation), taps an HTF Key Level, rejects, and reverses to target the opposite side of the range.
+
+---
+
+### 5. Entry Triggers & Model Confirmations
+* **Three Main CRT Types:**
+  1. **Three-Candle CRT (Core Model):**
+     * Candle 1: Accumulation (Sets the range).
+     * Candle 2: Manipulation (Raid / Turtle Soup).
+     * Candle 3: Distribution (Expansion to the opposite side).
+  2. **Two-Candle CRT:**
+     * Candle 1: Accumulation (Sets the range).
+     * Candle 2: Dual Duty (Sweeps liquidity/taps key level AND expands to the opposite side in the same candle). Common during high-impact news.
+  3. **Multiple-Candle CRT (Inside Bars & Outside Bars):**
+     * *Inside Bars CRT:* Candle 1 sets range; multiple inside candles consolidate. Wait for a sweep of one side of the range, followed by distribution.
+     * *Outside Bars CRT:* Candle 1 sets range; Candle 2 purges high/low; multiple candles distribute toward the opposite boundary.
+* **Integration with HTF Key Levels:**
+  * The most reliable CRT setups form **near Key Levels** (Order Blocks [OB], Fair Value Gaps [FVG], Breaker Blocks [BB], Rejection Blocks [RB], and major HTF Highs/Lows).
+  * *Sequence:* HTF Key Level $\rightarrow$ Candle 1 sets range below/above key level $\rightarrow$ Candle 2 raids liquidity and taps Key Level $\rightarrow$ Rejection $\rightarrow$ Candle 3 expands toward the opposite range boundary.
+
+---
+
+### 6. Invalidation & Stop Loss Rules
+* **Invalidation:** If Candle 2 (manipulation) raids the range high/low, taps the key level, but fails to close back inside the range or immediately continues breaking out past the liquidity boundary without rejection, the CRT setup is invalidated.
+* **Stop Loss Placement:** Placed beyond the extreme of the manipulation wick (beyond the raided CRH or CRL liquidity pool / Key Level boundary).
+
+---
+
+### 7. Target / Draw on Liquidity (DOL) & Risk Management
+* **Targets:** Fixed targets based on opposite range boundaries (e.g., if sell-side liquidity is raided at CRL, target the CRH).
+* **Execution Lower Timeframe (LTF):** After the manipulation sweep and tap of the key level on the range candle, drop to LTF (e.g., 1-min / 5-min) to look for Order Blocks, Market Structure Shifts (MSS), or Model-1 entries inside Candle 2.
+
+---
+
+### 8. Concrete Algorithmic Rules for Unified CRT Engine
+1. **Identify HTF Bias & Key Level:** Locate OB, FVG, BB, or RB on higher timeframes.
+2. **Mark Candle Range (CRT):** Define the Open, High (CRH), Low (CRL), and Close of the reference candle forming near the Key Level.
+3. **Wait for Manipulation (Turtle Soup):** Let price expand out of the range to sweep either buy-side or sell-side liquidity into the Key Level.
+4. **Confirm Rejection:** Verify that price reacts off the Key Level and closes back inside the candle range boundaries.
+5. **Execute Expansion Trade:** Target the opposing candle range boundary (CRL $\rightarrow$ CRH or CRH $\rightarrow$ CRL) utilizing LTF confirmation models.

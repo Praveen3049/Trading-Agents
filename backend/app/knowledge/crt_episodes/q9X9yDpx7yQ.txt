@@ -1,0 +1,81 @@
+### 1. Video Title & Episode Number / Topic
+* **Title:** CRT 2026 Mentorship Ep 9 | Connecting The Dots
+* **Instructor:** Mado (@MadoCRT)
+* **Topic:** Step-by-step execution framework of the **1 AM CRT (Candle Range Theory)** across multiple timeframes (Daily $\rightarrow$ 4H $\rightarrow$ M15) using Euro-Dollar (EUR/USD) as a live, real-time executed case study.
+
+---
+
+### 2. Core Strategy Concept
+* **1 AM CRT:** Trading a single 4-Hour (4H) candle based on its Open-High-Low-Close (OHLC / OLHC) profile.
+* **Core Philosophy:** Moving away from rigid, lagging "pattern matching" and focusing entirely on **Time, Location, and Market Context (Logic)**.
+* **Instrument Specifics:**
+  * **Forex (EUR/USD, etc.):** The key 4H candle starts at **1:00 AM** and ends at **5:00 AM** (spanning the London Killzone).
+  * **Indices:** The key 4H candle starts at 2:00 AM.
+* **Key Idea:** Capturing engineered liquidity purges (Turtle Soup) during key time windows using higher timeframe (HTF) premium/discount arrays and lower timeframe (LTF) order blocks / Model-1 structural shifts.
+
+---
+
+### 3. Timeframes, Session Timings & Key Ranges
+* **Daily Timeframe:** Establishes the daily candle sequence and macro range:
+  * **Candle 1:** Establishes the daily range.
+  * **Candle 2:** Manipulation phase into a key HTF PD array.
+  * **Candle 3:** Continuation/Expansional phase (directional confirmation).
+* **Intermediate Timeframe (4H):** Used for market context, narrative confirmation, and tapping into HTF premium/discount arrays (e.g., HTF PD array / weekly highs/lows).
+* **Lower Timeframe (M15 Execution):**
+  * Vertical dashed lines mark Daily CRT Candle 3 opening and the **1:00 AM** candle open.
+  * **1:00 AM Candle:** Operates inside the London Killzone (1:00 AM – 5:00 AM).
+  * **3:00 AM Window:** The critical execution window (3:00 AM – 4:00 AM) where the liquidity purge (Turtle Soup) occurs.
+
+---
+
+### 4. Structural Setup Mechanics
+1. **HTF Context (Daily/4H):** Price purges a key weekly high (or session high) and taps into a higher timeframe premium PD array.
+2. **Liquidity Engineering:** Look for obvious pre-drawn liquidity (e.g., 9:00 PM range high/low or previous session swing points).
+3. **The Purge (Turtle Soup):** During the 1:00 AM CRT candle (specifically inside the 3:00 AM – 4:00 AM window), price sweeps the prior high (9:00 PM range high) to grab buy-stop liquidity.
+4. **Displacement / Market Structure Shift (MSS):** Following the liquidity purge, price rapidly shifts state (Model-1 / change in state of delivery) by breaking consecutive lower candles and forming an **Order Block (OB)** or Fair Value Gap (FVG).
+
+---
+
+### 5. Entry Triggers & Model Confirmations
+* **Model-1 / OB Entry:** When the Model-1 candle (the swing-purging candle) is too small to use directly as an entry trigger, drop down to the order block left behind by the consecutive candle close below structural levels.
+* **Execution Trigger:** Enter short directly on the retest/mitigation of the M15 Order Block formed immediately after the purge of the 9:00 PM high during the 3:00 AM window.
+
+---
+
+### 6. Invalidation & Stop Loss Rules
+* **Stop Loss Placement:** Placed just above the swing high (the exact candle high that executed the "turtle soup" / purge of liquidity).
+* **Invalidation Level:** Any structural breach closing above the engineered turtle soup high.
+
+---
+
+### 7. Target / Draw on Liquidity (DOL) & Risk Management
+* **Take Profit / DOL:** Mechanically targeted at **3R (3-to-1 Risk-to-Reward ratio)** or extended toward the opposite side liquidity pool (e.g., the 2nd candle low / opposite session low).
+* **Management Philosophy:** Mechanical execution. Once 3R is achieved, the trade is closed. Do not hold greedily for extended moves if macro risk parameters are met.
+
+---
+
+### 8. Concrete Algorithmic Rules for Unified CRT Engine
+```json
+{
+  "setup_name": "1_AM_CRT_London_Killzone",
+  "asset_class": "Forex",
+  "time_window": {
+    "start_utc": "01:00",
+    "end_utc": "05:00",
+    "execution_window_utc": "03:00_04:00"
+  },
+  "prerequisites": [
+    "Identify Daily Candle 3 narrative context in HTF Premium/Discount array",
+    "Map prior session 9:00 PM high/low liquidity pools"
+  ],
+  "entry_rules": {
+    "trigger": "Turtle soup purge of 9:00 PM range extreme during 03:00-04:00 window",
+    "confirmation": "Displacement with consecutive candle closes forming an M15 Order Block / Model-1 shift",
+    "execution": "Limit order at M15 Order Block mitigation"
+  },
+  "risk_management": {
+    "stop_loss": " Above/below the extreme wick of the liquidity purge candle",
+    "take_profit": "Mechanical 3R minimum or opposite liquidity pool (Second candle high/low)"
+  }
+}
+```

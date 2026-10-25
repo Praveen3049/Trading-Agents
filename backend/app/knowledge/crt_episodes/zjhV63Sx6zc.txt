@@ -1,0 +1,90 @@
+Here is a complete, institutional-grade technical breakdown of the CRT 2026 Mentorship Episode 10 (05:00 AM CRT), structured for direct integration into your algorithmic trading engine.
+
+---
+
+### **1. Video Title & Episode Number / Topic**
+* **Title:** CRT 2026 Mentorship Ep 10 | 05:00 AM CRT
+* **Speaker / Mentor:** Mado (@MadoCRT)
+* **Core Topic:** Comprehensive execution framework for the **05:00 AM 4-Hour Candle Range Time (CRT)**, detailing contextual pre-candle profiling (09:00 PM & 01:00 AM candles), three distinct intraday profiles, OHLC / OLHC anatomy, and M15 execution triggers.
+
+---
+
+### **2. Core Strategy Concept**
+The **05:00 AM CRT** is one of the most complete and layered models in the system because it compresses three prior intraday segments—the tail end of London, the Lunch Lull, and the New York open ignition—into a single 4-hour execution window (05:00 AM to 09:00 AM). 
+* **Definition:** Trading the single 4-hour candle opening at 05:00 AM.
+* **Instrument-Specific Opening Times:**
+  * **Forex:** Key 4H candle starts at **05:00 AM**.
+  * **Indices:** Key 4H candle shifts and starts at **06:00 AM**.
+* **The Golden Rule:** Never trade the 05:00 AM candle in isolation. It relies on a multi-layered context built by two prior candles:
+  1. **09:00 PM Candle** (Asia Range)
+  2. **01:00 AM Candle** (London Range)
+
+---
+
+### **3. Timeframes, Session Timings & Key Ranges**
+* **Analysis Timeframe (HTF):** Daily / 4-Hour (4H) chart for bias, Higher Timeframe (HTF) Premium / Discount arrays, and Daily Highs / Lows (PDH / PDL).
+* **Context Timings:**
+  * **09:00 PM – 01:00 AM:** Asia Range (Candle 1 context)
+  * **01:00 AM – 05:00 AM:** London Range (Candle 2 context)
+* **The 05:00 AM Window (CRT):** 05:00 AM – 09:00 AM (Develops within London Lunch and the first two hours of New York).
+* **High-Probability Execution Windows (Killzones):**
+  * **06:00 AM – 07:00 AM:** London Lunch time.
+  * **07:00 AM – 08:30 AM:** New York Open time.
+* **Execution Timeframe:** M15 (15-Minute chart) for entry trigger confirmation.
+
+---
+
+### **4. Structural Setup Mechanics**
+Before price reacts at 05:00 AM, the previous two candles (09:00 PM & 01:00 AM) establish a consolidated range or a preliminary trend. 
+* **The Turtle Soup Prerequisite:** Before any major expansion, institutional order flow requires resting liquidity to be purged. The 05:00 AM candle opens by executing a **Turtle Soup** (sweeping the 01:00 AM or 09:00 PM range high/low or previous day high/low).
+* **Higher Timeframe Alignment:** The 05:00 AM setup must align with the HTF Order Flow. Betting against the HTF institutional order flow after a sweep results in low-probability trades.
+
+---
+
+### **5. Entry Triggers & Model Confirmations (M15)**
+Once price purges key liquidity (Turtle Soup) at the 05:00 AM open, drop directly to the **M15 chart** to wait for confirmation:
+* **Entry Model:** **Model-1** (Market Structure Shift / Change in State of Delivery - CISD).
+* **Execution Sequence:**
+  1. Identify 1AM / 9PM Range Highs/Lows (CRH / CRL) and the 50% midpoint.
+  2. Wait for price to approach the key level (HTF array or 1AM/9PM extreme).
+  3. Wait for the 05:00 AM candle to execute the **Turtle Soup** (sweep of liquidity).
+  4. Drop to the **M15 chart** and wait for **Model-1 confirmation** (break of structure with displacement/expansion).
+  5. Enter in the direction of expansion.
+
+---
+
+### **6. Invalidation & Stop Loss Rules**
+* **Stop Loss Placement:** Always positioned **beyond the sweep (beyond the extreme wick/turtle soup level)**. 
+* **Time Invalidation (The Law of Time):** *"If the time is right, the pattern works. If the time is wrong, the pattern fails."* If the expected behavior does not manifest within the 06:00–08:30 AM key windows, abandon the setup. Do not force trades outside the designated high-probability time parameters.
+
+---
+
+### **7. Target / Draw on Liquidity (DOL) & Risk Management**
+* **Targets (TP):** Opposite side of the dealing range, internal liquidity pools, or the next major Higher Timeframe liquidity draw.
+* **Risk Management:** Strict adherence to structural stop losses. Never bypass M15 Model-1 confirmation based on time alone.
+
+---
+
+### **8. Concrete Algorithmic Rules to Add to the Unified CRT Engine**
+
+#### **Rule Set 1: Anatomy & Profile Classification (The 3 Intraday Profiles for 05:00 AM)**
+1. **Profile 1: London Lunch Low / High of the Day (Reversal / Expansion)**
+   * *01:00 AM Candle:* Range (consolidates).
+   * *05:00 AM Candle:* Manipulation & Expansion.
+   * *Signature:* The 05:00 AM candle / London Lunch session marks the **exact High or Low of the Day** (extreme of the day, not a small wick).
+2. **Profile 2: New York Reversal Profile**
+   * *01:00 AM Candle:* Range.
+   * *05:00 AM Candle:* Manipulation & Expansion.
+   * *Signature:* The extreme of the day occurs later during the New York open window (**07:00 AM – 10:00 AM**). 
+3. **Profile 3: New York Continuation Profile**
+   * *09:00 PM Candle:* Range.
+   * *01:00 AM Candle:* Manipulation & Expansion.
+   * *05:00 AM Candle:* Continuation (rides the directional momentum already established by the 01:00 AM candle).
+
+#### **Rule Set 2: OHLC / OLHC Execution Anatomy (Bullish Example)**
+* **Open:** Candle opens at 05:00 AM.
+* **Low (Turtle Soup):** Price dips down immediately to purge the 01:00 AM low / session low (this sweep **must** occur; it is never mere decoration).
+* **Key Level Reaction:** The sweep taps into an HTF discount array or liquidity pool.
+* **Expansion (Model-1):** Price shifts structure upward on the M15 timeframe.
+* **Close:** Candle expands aggressively and closes near its session high.
+*(Mirror exact logic for bearish setups: Open $\rightarrow$ Spike up to purge 1AM High $\rightarrow$ Model-1 Bearish Confirmation $\rightarrow$ Expansion Down).*

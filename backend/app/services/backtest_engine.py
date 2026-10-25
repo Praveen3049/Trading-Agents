@@ -291,7 +291,73 @@ class BacktestEngine:
                             continue
 
             # -------------------------------------------------------------------
-            # STRATEGY MODEL B: 09:00 AM CRT MODEL (Episode 11 by Mado)
+            # STRATEGY MODEL B: 05:00 AM CRT MODEL (Episode 10 by Mado)
+            # -------------------------------------------------------------------
+            if strategy_model in ["crt_5am", "combined"]:
+                anchor_5am = 6 if "BTC" in symbol.upper() else 5
+                # 05:00 AM Window: 05:00 to 09:00 NY, Execution in 06:00-08:30 NY
+                if anchor_5am <= hour <= 8 and (ref_9pm_high > 0 or feeder_high > 0):
+                    ref_high_target = max(ref_9pm_high, feeder_high)
+                    ref_low_target = min(ref_9pm_low, feeder_low) if min(ref_9pm_low, feeder_low) > 0 else ref_9pm_low
+
+                    if curr_h > ref_high_target:
+                        swept_feeder_high = True
+                        purge_high_wick = max(purge_high_wick, curr_h)
+                    if curr_l < ref_low_target:
+                        swept_feeder_low = True
+                        purge_low_wick = min(purge_low_wick, curr_l)
+
+                    # Only execute inside 06:00 - 08:30 NY high-probability window
+                    if (hour == 6) or (hour == 7 and minute <= 45):
+                        htf_trend_bull = curr_c >= sma50[i] if not np.isnan(sma50[i]) else True
+                        htf_trend_bear = curr_c <= sma50[i] if not np.isnan(sma50[i]) else True
+
+                        # 5AM CRT LONG: Swept 1AM/9PM Low + M15 Model-1 Close back above
+                        if swept_feeder_low and curr_c > ref_low_target and purge_low_wick < ref_low_target and (not apply_crt_filter or htf_trend_bull):
+                            entry = curr_c
+                            sl_offset = (purge_low_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
+                            sl = purge_low_wick - sl_offset
+                            risk_dist = entry - sl
+                            if risk_dist > 0 and (risk_dist / entry) < 0.02:
+                                tp = entry + (risk_dist * rr_target)
+                                active_trade = {
+                                    "trade_num": len(trades) + 1,
+                                    "entry_time": curr_time,
+                                    "symbol": symbol,
+                                    "direction": "BUY",
+                                    "entry_price": round(entry, cfg["decimals"]),
+                                    "stop_loss": round(sl, cfg["decimals"]),
+                                    "take_profit": round(tp, cfg["decimals"]),
+                                    "risk_dist": risk_dist,
+                                    "setup_type": "05:00 AM CRT Bullish Purge & M15 Model-1 (Ep 10)"
+                                }
+                                swept_feeder_low = False
+                                continue
+
+                        # 5AM CRT SHORT: Swept 1AM/9PM High + M15 Model-1 Close back below
+                        elif swept_feeder_high and curr_c < ref_high_target and purge_high_wick > ref_high_target and (not apply_crt_filter or htf_trend_bear):
+                            entry = curr_c
+                            sl_offset = (purge_high_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
+                            sl = purge_high_wick + sl_offset
+                            risk_dist = sl - entry
+                            if risk_dist > 0 and (risk_dist / entry) < 0.02:
+                                tp = entry - (risk_dist * rr_target)
+                                active_trade = {
+                                    "trade_num": len(trades) + 1,
+                                    "entry_time": curr_time,
+                                    "symbol": symbol,
+                                    "direction": "SELL",
+                                    "entry_price": round(entry, cfg["decimals"]),
+                                    "stop_loss": round(sl, cfg["decimals"]),
+                                    "take_profit": round(tp, cfg["decimals"]),
+                                    "risk_dist": risk_dist,
+                                    "setup_type": "05:00 AM CRT Bearish Purge & M15 Model-1 (Ep 10)"
+                                }
+                                swept_feeder_high = False
+                                continue
+
+            # -------------------------------------------------------------------
+            # STRATEGY MODEL C: 09:00 AM CRT MODEL (Episode 11 by Mado)
             # -------------------------------------------------------------------
             if strategy_model in ["crt_9am", "combined"]:
                 if anchor_9am_hour <= hour < 13 and open_9am > 0:

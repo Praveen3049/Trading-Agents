@@ -1,0 +1,98 @@
+### 1. Video Title & Episode Number / Topic
+* **Title:** CRT 2026 Mentorship Ep 3 | Syncing Timeframes
+* **Instructor:** Mado (@Im_Speculator)
+* **Topic:** Higher Timeframe to Lower Timeframe (HTF > ITF > LTF) Thought Process, Multi-Timeframe Integration, Order Flow, Bias, Directional Draw on Liquidity (DOL), Candle Range Theory (CRT) Execution.
+
+---
+
+### 2. Core Strategy Concept
+The lecture teaches the **HTF > ITF > LTF Syncing Process** using Candle Range Theory (CRT) combined with institutional Smart Money Concepts (SMC). The core premise is that a trader must build a clear, logical trading narrative by descending from Higher Timeframes (HTF - Daily/4H) to Intermediate Timeframes (ITF - 4H/1H/Killzones) down to Lower Timeframe execution (LTF - 15m/5m). 
+
+* **HTF:** Understand where market order flow is directed, establish current market bias, and identify the directional Draw on Liquidity (DOL).
+* **ITF:** Establish time and price narratives (Killzones, PO3, Dealing Ranges, Turtle soups, CRT context) and refine key levels.
+* **LTF:** Execute based on timing (Killzones), model-based entries (e.g., Model-1 Order Block/Turtle Soup), protected swing stop loss placement, and predefined CRT risk-to-reward targets.
+
+---
+
+### 3. Timeframes, Session Timings & Key Ranges
+* **HTF (Higher Timeframe):** Daily Chart (Order Flow, Bias, DOL, Key Levels like FVG / Order Blocks).
+* **ITF (Intermediate Timeframe):** 4-Hour / Hourly (Context, narrative, refinement of key levels, CRT range integration).
+* **LTF (Lower Timeframe):** 15-Minute / Lower (Execution, Model-1 entry, structural defense).
+* **Session Timings (Killzones - UTC-5 / UTC-4 adjusted):**
+  * **London Killzone:** 02:00 AM – 05:00 AM (UTC-5/4)
+  * **New York Killzone:** 07:00 AM – 10:00 / 11:00 AM (UTC-5/4)
+  * *Rule:* Ignore local country time; set charts explicitly to UTC-5 or UTC-4 to match institutional algorithmic killzones.
+
+---
+
+### 4. Structural Setup Mechanics
+* **HTF Order Flow:** Identifying the prevailing direction of price delivery (bullish = rejecting below lows and breaking above highs; bearish = rejecting above highs and breaking below lows).
+* **HTF Bias & DOL (Draw on Liquidity):** Determining if candles close above/inside/below previous candles to establish directional bias and target liquidity pools.
+* **ITF Context & Narrative:** Using time-based narratives (Killzones, OHLC/OLHC profiles) and price-based narratives (PO3, dealing ranges, turtle soups, CRT framework).
+* **LTF Setup (Turtle Soup & Displacement):** 
+  * Price sweeps (purges) a lower-timeframe swing low/high (Turtle Soup).
+  * Price reacts off a refined ITF/HTF key level (Order Block or Fair Value Gap - FVG).
+  * Market creates a displacement / Market Structure Shift (MSS) closing above/below key structural candles.
+
+---
+
+### 5. Entry Triggers & Model Confirmations
+* **Model-1 Entry (Order Block / CRT Model):** 
+  * 1. Price purges a liquidity level (swing low/high) during an institutional Killzone.
+  * 2. Price taps a refined key level (HTF/ITF Order Block or FVG).
+  * 3. LTF candle closes back across the structural pivot / range (CRT candle close confirmation).
+  * 4. Entry is taken on the open/retest of the confirming candle or model-1 specification.
+
+---
+
+### 6. Invalidation & Stop Loss Rules
+* **Stop Loss Placement:** Always placed beyond the **Protected Swing High / Low** (the structural swing point that created the Model-1 entry setup). 
+* **Invalidation:** If price breaks the protected swing high/low, the narrative/trade idea is invalidated. Unhedged/blind stops are prohibited; structural defense is mandatory.
+
+---
+
+### 7. Target / Draw on Liquidity (DOL) & Risk Management
+* **Targets (TP):** 
+  * 50% of the CRT range
+  * CRT High / Low (depending on trade direction)
+  * Major Higher Timeframe liquidity pools (DOL) for runners (with partial profits taken beforehand).
+* **Risk-to-Reward Ratio (RR):** Minimum **1:2 to 1:3 RR** per execution to ensure a steadily growing equity curve even with modest win rates.
+
+---
+
+### 8. Concrete Algorithmic Rules for the Unified CRT Engine
+
+```python
+class CRTEngine_Ep3:
+    def execute_trade_plan(self, htf_data, itf_data, ltf_data):
+        # STEP 1: HIGHER TIMEFRAME ANALYSIS
+        htf_order_flow = self.determine_order_flow(htf_data) # Bullish or Bearish
+        htf_bias = self.calculate_candle_bias(htf_data)      # Close above/below previous candle
+        htf_dol = self.identify_draw_on_liquidity(htf_data)  # Liquidity pools / HTF highs/lows
+        htf_key_levels = self.extract_key_levels(htf_data)   # OBs, FVGs, Rejection Blocks
+
+        # STEP 2: INTERMEDIATE TIMEFRAME CONTEXT & NARRATIVE
+        itf_killzone = self.validate_killzone_timing(itf_data, session=["London", "New York"])
+        itf_crt_context = self.apply_crt_context(itf_data, htf_key_levels)
+        refined_level = self.refine_key_level(itf_data, htf_key_levels)
+
+        # STEP 3: LOWER TIMEFRAME EXECUTION (MODEL-1)
+        ltf_purge = self.detect_turtle_soup(ltf_data, htf_dol) # Liquidity sweep
+        ltf_tap = self.check_level_tap(ltf_data, refined_level)  # Rejection block / OB tap
+        
+        if htf_order_flow == "BULLISH" and htf_bias == "BULLISH" and ltf_purge and ltf_tap:
+            entry_price = ltf_data.get_model1_entry_close()
+            stop_loss = ltf_data.get_protected_swing_low()
+            target = htf_dol # Or 50% CRT range for partials
+            
+            rr_ratio = (target - entry_price) / (entry_price - stop_loss)
+            if rr_ratio >= 2.0:
+                return {
+                    "Action": "BUY",
+                    "Entry": entry_price,
+                    "StopLoss": stop_loss,
+                    "Target": target,
+                    "RR": rr_ratio
+                }
+        return {"Action": "WAIT / NO SETUP"}
+```

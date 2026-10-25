@@ -1,0 +1,83 @@
+Here is a comprehensive breakdown of the institutional trading concepts, mechanics, and algorithmic entry rules presented in **CRT 2026 Mentorship Ep 2: Model-1 (Lower Timeframe Methodology & Entry Model)** by Mado:
+
+---
+
+### 1. Video Title & Episode Number / Topic
+* **Title:** CRT 2026 Mentorship Ep 2 | Model-1
+* **Topic:** Lower Time Frame (LTF) Methodology & Entry Model (Model-1: Confirmation-Based Entry via Liquidity Purges & FVG Rebalancing).
+
+---
+
+### 2. Core Strategy Concept
+* **Model-1 Entry Model:** A systematic, high-probability confirmation entry model that bridges Higher Timeframe (HTF) order flow with Lower Timeframe (LTF) execution. 
+* It requires zero guessing: price must first purge external liquidity (taking out a candle range high/low, old high/low, or CRT high/low) **AND** fill an existing Fair Value Gap (FVG) / rebalance an imbalance. 
+* Once liquidity is taken and the model candle is formed/engulfed, execution is derived on the LTF using precise candle-close criteria.
+
+---
+
+### 3. Timeframes, Session Timings & Key Ranges
+* **HTF to LTF Alignment Framework:**
+  * **Monthly CRT** $\rightarrow$ Execute on **Daily** LTF
+  * **Weekly CRT** $\rightarrow$ Execute on **4H** LTF
+  * **Daily CRT** $\rightarrow$ Execute on **1H** LTF
+  * **4H CRT** $\rightarrow$ Execute on **15M** LTF
+  * **1H CRT** $\rightarrow$ Execute on **5M** LTF
+* **Timing Discipline:** Entries should strictly align with key time windows (killzones, specific refined sessions) to avoid random market execution.
+
+---
+
+### 4. Structural Setup Mechanics
+* **Purge Phase:** Price runs an explicit HTF or LTF key level (candle range high/low or old swing high/low) to trigger trapped liquidity and stops.
+* **Imbalance / FVG Rebalancing:** Concurrently or sequentially, price fills an imbalance (FVG) or tests an existing order block.
+* **Model-1 Dual Condition (The "Both-Job" Candle):** The optimal setup occurs when a single candle (or immediate sequence) **both** purges liquidity **and** rebalances an FVG/order block simultaneously.
+
+---
+
+### 5. Entry Triggers & Model Confirmations
+* **Engulfing Confirmation:** Wait for price to close below/above the purging candle in the intended direction.
+* **Retest Confirmation:** Price must return to retest the exact model candle (respecting it) before continuation.
+* **Opening Price vs. Wick Selection Rules:**
+  * **Use Opening Price:** When the model candle is large, strong, and beefy, use its open price for a tighter, more reliable entry.
+  * **Use High/Low (Wick):** When the candle has a small body and a long wick (where the wick carries more structural weight), or when the close breaks beyond the high/low, use the wick level for entry.
+
+---
+
+### 6. Invalidation & Stop Loss Rules
+* **Stop Loss Placement:** Placed safely above/below the model candle’s high/low or the immediate swing high/low structure.
+* **Invalidation:** If price fails to retrace and impulses aggressively away without a retest, **miss the trade.** Missing a trade costs nothing; forcing a trade damages capital and psychology.
+
+---
+
+### 7. Target / Draw on Liquidity (DOL) & Risk Management
+* **Targets:** Aim for the opposite end of the HTF/LTF CRT range, or take partial profits at the 50% equilibrium level of the range.
+* **Risk-to-Reward:** Model-1 provides asymmetric R:R (high reward relative to tight, defined risk).
+
+---
+
+### 8. Concrete Algorithmic Rules for the Unified CRT Engine
+```python
+class Model1ExecutionEngine:
+    def evaluate_setup(htf_crt, ltf_candles):
+        # Step 1: Timeframe Alignment Check
+        validate_timeframe_alignment(htf_crt.timeframe, ltf_candles.timeframe)
+        
+        # Step 2: Liquidity Purge Detection
+        purge_detected = check_liquidity_purge(ltf_candles, htf_crt.key_levels)
+        
+        # Step 3: FVG / Imbalance Rebalancing Check
+        fvg_filled = check_fvg_rebalance(ltf_candles)
+        
+        # Step 4: Model-1 Confirmation (Engulfing Close)
+        model_candle = identify_purging_candle(ltf_candles)
+        confirmed = check_candle_close_engulf(ltf_candles.current, model_candle)
+        
+        if purge_detected and fvg_filled and confirmed:
+            # Step 5: Entry Reference Selection (Body Open vs. Wick High/Low)
+            entry_price = select_entry_price(model_candle)
+            stop_loss = set_stop_loss(model_candle)
+            target = determine_dol(htf_crt)
+            
+            return ExecuteOrder(entry=entry_price, sl=stop_loss, tp=target)
+        else:
+            return "NO_SETUP_STAND_ASIDE"
+```
