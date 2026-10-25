@@ -34,6 +34,45 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showOverlays, setShowOverlays] = useState(true);
 
+  // Backtest Lab state
+  const [backtestData, setBacktestData] = useState<any>(null);
+  const [isBacktesting, setIsBacktesting] = useState(false);
+  const [backtestTf, setBacktestTf] = useState("15m");
+  const [backtestPeriod, setBacktestPeriod] = useState("60d");
+  const [backtestCrtFilter, setBacktestCrtFilter] = useState(true);
+  const [backtestRr, setBacktestRr] = useState(2.0);
+
+  const runBacktest = async (
+    sym = ticker,
+    tf = backtestTf,
+    period = backtestPeriod,
+    crt = backtestCrtFilter,
+    rr = backtestRr
+  ) => {
+    setIsBacktesting(true);
+    try {
+      const res = await fetch("http://localhost:8000/api/backtest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticker: sym,
+          timeframe: tf,
+          period: period,
+          rr_target: rr,
+          apply_crt_filter: crt
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBacktestData(data);
+      }
+    } catch (err) {
+      console.error("Backtest failed:", err);
+    } finally {
+      setIsBacktesting(false);
+    }
+  };
+
   // Fetch AI Status
   const fetchAiStatus = async () => {
     try {
@@ -315,6 +354,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetchMarketCandles(ticker, timeframe);
     fetchAnalysis(ticker);
+    runBacktest(ticker);
   }, [ticker, timeframe]);
 
   // Re-render overlays when showOverlays toggle changes
@@ -777,6 +817,261 @@ export default function Dashboard() {
 
           </div>
         )}
+
+        {/* Institutional Backtest Lab */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-black text-white flex items-center gap-2">
+                  <span>📊</span> Institutional Quantitative Backtest Lab
+                </span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 font-semibold uppercase tracking-wider">
+                  CRT Engine
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Bar-by-bar historical verification of Asian sweep setups, London/NY manipulation windows, and trailing breakeven management.
+              </p>
+            </div>
+
+            {/* Backtest Control Toolbar */}
+            <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+              {/* Timeframe selector */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-mono">
+                {["5m", "15m", "1h"].map((tf) => (
+                  <button
+                    key={tf}
+                    onClick={() => {
+                      setBacktestTf(tf);
+                      runBacktest(ticker, tf, backtestPeriod, backtestCrtFilter, backtestRr);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg uppercase font-bold transition ${
+                      backtestTf === tf ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {tf}
+                  </button>
+                ))}
+              </div>
+
+              {/* Period selector */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-mono">
+                {["30d", "60d"].map((prd) => (
+                  <button
+                    key={prd}
+                    onClick={() => {
+                      setBacktestPeriod(prd);
+                      runBacktest(ticker, backtestTf, prd, backtestCrtFilter, backtestRr);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg uppercase font-bold transition ${
+                      backtestPeriod === prd ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {prd}
+                  </button>
+                ))}
+              </div>
+
+              {/* CRT Filter Toggle */}
+              <button
+                onClick={() => {
+                  const nextFilter = !backtestCrtFilter;
+                  setBacktestCrtFilter(nextFilter);
+                  runBacktest(ticker, backtestTf, backtestPeriod, nextFilter, backtestRr);
+                }}
+                className={`text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 border ${
+                  backtestCrtFilter
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                    : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                }`}
+              >
+                <span>{backtestCrtFilter ? "🛡️" : "⚡"}</span>
+                <span>{backtestCrtFilter ? "CRT Filter: ON" : "24/7 Unfiltered"}</span>
+              </button>
+
+              {/* Run button */}
+              <button
+                onClick={() => runBacktest(ticker, backtestTf, backtestPeriod, backtestCrtFilter, backtestRr)}
+                disabled={isBacktesting}
+                className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-blue-900/40 disabled:opacity-50"
+              >
+                <span className={isBacktesting ? "animate-spin" : ""}>🔄</span>
+                <span>{isBacktesting ? "Simulating..." : "Run Backtest"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Backtest KPI Cards */}
+          {backtestData ? (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                {/* Win Rate */}
+                <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-[11px] text-slate-400 font-sans block mb-1">Win Rate</span>
+                  <div className="text-xl font-black font-mono text-emerald-400">
+                    {backtestData.win_rate}%
+                  </div>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                    {backtestData.wins}W / {backtestData.losses}L / {backtestData.breakevens}BE
+                  </span>
+                </div>
+
+                {/* Net Return */}
+                <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-[11px] text-slate-400 font-sans block mb-1">Net Return</span>
+                  <div className={`text-xl font-black font-mono ${
+                    (backtestData.net_return_pct ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                  }`}>
+                    {(backtestData.net_return_pct ?? 0) >= 0 ? '+' : ''}{backtestData.net_return_pct}%
+                  </div>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                    ${backtestData.net_profit?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                {/* Profit Factor */}
+                <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-[11px] text-slate-400 font-sans block mb-1">Profit Factor</span>
+                  <div className={`text-xl font-black font-mono ${
+                    (backtestData.profit_factor ?? 0) >= 1.0 ? 'text-blue-400' : 'text-amber-400'
+                  }`}>
+                    {backtestData.profit_factor}
+                  </div>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                    Gross Win / Loss
+                  </span>
+                </div>
+
+                {/* Max Drawdown */}
+                <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-[11px] text-slate-400 font-sans block mb-1">Max Drawdown</span>
+                  <div className="text-xl font-black font-mono text-rose-400">
+                    -{backtestData.max_drawdown_pct}%
+                  </div>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                    Peak to Valley
+                  </span>
+                </div>
+
+                {/* Total Executions */}
+                <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-[11px] text-slate-400 font-sans block mb-1">Total Executed</span>
+                  <div className="text-xl font-black font-mono text-white">
+                    {backtestData.total_trades}
+                  </div>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                    {backtestData.period} simulation
+                  </span>
+                </div>
+
+                {/* Target R:R */}
+                <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-[11px] text-slate-400 font-sans block mb-1">Risk Profile</span>
+                  <div className="text-xl font-black font-mono text-purple-400">
+                    1:{backtestData.risk_reward_ratio}
+                  </div>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                    BE Trailed @ 1.0R
+                  </span>
+                </div>
+              </div>
+
+              {/* Recent Backtest Trades Table */}
+              {backtestData.recent_trades && backtestData.recent_trades.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                      Recent Simulated Trades ({backtestData.symbol})
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      Showing last {backtestData.recent_trades.length} entries
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60">
+                    <table className="w-full text-left text-xs font-mono">
+                      <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                        <tr>
+                          <th className="py-2.5 px-3">#</th>
+                          <th className="py-2.5 px-3">Date / Time (UTC)</th>
+                          <th className="py-2.5 px-3">Direction</th>
+                          <th className="py-2.5 px-3">Setup Model</th>
+                          <th className="py-2.5 px-3">Entry</th>
+                          <th className="py-2.5 px-3">Stop Loss</th>
+                          <th className="py-2.5 px-3">Take Profit</th>
+                          <th className="py-2.5 px-3">Exit</th>
+                          <th className="py-2.5 px-3">Result</th>
+                          <th className="py-2.5 px-3 text-right">R-Multiple</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                        {backtestData.recent_trades.map((trade: any, idx: number) => {
+                          const isWin = trade.outcome === 'WIN';
+                          const isLoss = trade.outcome === 'LOSS';
+                          const isBe = trade.outcome === 'BREAKEVEN';
+                          return (
+                            <tr key={idx} className="hover:bg-slate-900/50 transition">
+                              <td className="py-2 px-3 text-slate-500">{trade.trade_num}</td>
+                              <td className="py-2 px-3 text-slate-400">
+                                {trade.entry_time?.replace('+00:00', '')}
+                              </td>
+                              <td className="py-2 px-3 font-bold">
+                                <span className={`px-2 py-0.5 rounded text-[10px] ${
+                                  trade.direction === 'BUY'
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                }`}>
+                                  {trade.direction}
+                                </span>
+                              </td>
+                              <td className="py-2 px-3 text-slate-400 font-sans text-[11px] truncate max-w-[180px]">
+                                {trade.setup_type}
+                              </td>
+                              <td className="py-2 px-3 font-semibold text-white">
+                                {trade.entry_price?.toLocaleString()}
+                              </td>
+                              <td className="py-2 px-3 text-rose-400/90">
+                                {trade.stop_loss?.toLocaleString()}
+                              </td>
+                              <td className="py-2 px-3 text-sky-400/90">
+                                {trade.take_profit?.toLocaleString()}
+                              </td>
+                              <td className="py-2 px-3 text-slate-300">
+                                {trade.exit_price?.toLocaleString()}
+                              </td>
+                              <td className="py-2 px-3">
+                                <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
+                                  isWin ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                                  isLoss ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                                  'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                }`}>
+                                  {trade.outcome} {trade.breakeven_activated && !isWin ? '(BE)' : ''}
+                                </span>
+                              </td>
+                              <td className={`py-2 px-3 text-right font-bold ${
+                                trade.r_multiple > 0 ? 'text-emerald-400' :
+                                trade.r_multiple < 0 ? 'text-rose-400' : 'text-amber-400'
+                              }`}>
+                                {trade.r_multiple > 0 ? '+' : ''}{trade.r_multiple}R
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="py-8 text-center bg-slate-950/40 rounded-xl border border-slate-800">
+              <span className="text-slate-400 text-sm">
+                Click <span className="text-blue-400 font-bold">Run Backtest</span> above to simulate institutional CRT signals on {ticker}.
+              </span>
+            </div>
+          )}
+        </div>
 
         {/* Modal: API Key Configuration */}
         {showKeyModal && (

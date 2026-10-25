@@ -8,6 +8,7 @@ from .agents.crt_agent import CRTAgent
 from .agents.technical_engine import TechnicalStructureEngine
 from .services.llm_service import llm_service
 from .services.market_data_service import market_data_service
+from .services.backtest_engine import backtest_engine
 from .core.config import settings
 
 app = FastAPI(title="Trading Agents API")
@@ -24,6 +25,13 @@ class MarketData(BaseModel):
     ticker: str
     timeframe: str = "5m"
 
+class BacktestRequest(BaseModel):
+    ticker: str
+    timeframe: str = "15m"
+    period: str = "60d"
+    rr_target: float = 2.0
+    apply_crt_filter: bool = True
+
 class APIKeysUpdate(BaseModel):
     gemini_key: Optional[str] = None
     openai_key: Optional[str] = None
@@ -32,6 +40,17 @@ class APIKeysUpdate(BaseModel):
 @app.get("/")
 def read_root():
     return {"message": "Trading Agents API is running!"}
+
+@app.post("/api/backtest")
+def run_backtest_endpoint(req: BacktestRequest):
+    """Executes institutional backtest with CRT session filtering."""
+    return backtest_engine.run_backtest(
+        symbol=req.ticker,
+        timeframe=req.timeframe,
+        period=req.period,
+        rr_target=req.rr_target,
+        apply_crt_filter=req.apply_crt_filter
+    )
 
 @app.get("/api/assets")
 def get_assets():
