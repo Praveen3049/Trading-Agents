@@ -41,13 +41,15 @@ export default function Dashboard() {
   const [backtestPeriod, setBacktestPeriod] = useState("60d");
   const [backtestCrtFilter, setBacktestCrtFilter] = useState(true);
   const [backtestRr, setBacktestRr] = useState(2.0);
+  const [backtestModel, setBacktestModel] = useState("crt_1am");
 
   const runBacktest = async (
     sym = ticker,
     tf = backtestTf,
     period = backtestPeriod,
     crt = backtestCrtFilter,
-    rr = backtestRr
+    rr = backtestRr,
+    model = backtestModel
   ) => {
     setIsBacktesting(true);
     try {
@@ -59,7 +61,8 @@ export default function Dashboard() {
           timeframe: tf,
           period: period,
           rr_target: rr,
-          apply_crt_filter: crt
+          apply_crt_filter: crt,
+          strategy_model: model
         })
       });
       if (res.ok) {
@@ -837,6 +840,29 @@ export default function Dashboard() {
 
             {/* Backtest Control Toolbar */}
             <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+              {/* Strategy Model Selector */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-mono">
+                {[
+                  { id: "crt_1am", label: "01:00 AM CRT (Ep 8)", icon: "🎯" },
+                  { id: "london_ny", label: "London/NY CRT", icon: "🏛️" },
+                  { id: "combined", label: "Combined Suite", icon: "⚡" },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => {
+                      setBacktestModel(m.id);
+                      runBacktest(ticker, backtestTf, backtestPeriod, backtestCrtFilter, backtestRr, m.id);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
+                      backtestModel === m.id ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>{m.icon}</span>
+                    <span>{m.label}</span>
+                  </button>
+                ))}
+              </div>
+
               {/* Timeframe selector */}
               <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-mono">
                 {["5m", "15m", "1h"].map((tf) => (
@@ -844,7 +870,7 @@ export default function Dashboard() {
                     key={tf}
                     onClick={() => {
                       setBacktestTf(tf);
-                      runBacktest(ticker, tf, backtestPeriod, backtestCrtFilter, backtestRr);
+                      runBacktest(ticker, tf, backtestPeriod, backtestCrtFilter, backtestRr, backtestModel);
                     }}
                     className={`px-2.5 py-1 rounded-lg uppercase font-bold transition ${
                       backtestTf === tf ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
@@ -862,7 +888,7 @@ export default function Dashboard() {
                     key={prd}
                     onClick={() => {
                       setBacktestPeriod(prd);
-                      runBacktest(ticker, backtestTf, prd, backtestCrtFilter, backtestRr);
+                      runBacktest(ticker, backtestTf, prd, backtestCrtFilter, backtestRr, backtestModel);
                     }}
                     className={`px-2.5 py-1 rounded-lg uppercase font-bold transition ${
                       backtestPeriod === prd ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
@@ -878,7 +904,7 @@ export default function Dashboard() {
                 onClick={() => {
                   const nextFilter = !backtestCrtFilter;
                   setBacktestCrtFilter(nextFilter);
-                  runBacktest(ticker, backtestTf, backtestPeriod, nextFilter, backtestRr);
+                  runBacktest(ticker, backtestTf, backtestPeriod, nextFilter, backtestRr, backtestModel);
                 }}
                 className={`text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 border ${
                   backtestCrtFilter
@@ -892,7 +918,7 @@ export default function Dashboard() {
 
               {/* Run button */}
               <button
-                onClick={() => runBacktest(ticker, backtestTf, backtestPeriod, backtestCrtFilter, backtestRr)}
+                onClick={() => runBacktest(ticker, backtestTf, backtestPeriod, backtestCrtFilter, backtestRr, backtestModel)}
                 disabled={isBacktesting}
                 className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-blue-900/40 disabled:opacity-50"
               >

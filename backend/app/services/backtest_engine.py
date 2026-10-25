@@ -18,16 +18,19 @@ class BacktestEngine:
         timeframe: str = "15m",
         period: str = "60d",
         rr_target: float = 2.0,
-        apply_crt_filter: bool = True
+        apply_crt_filter: bool = True,
+        strategy_model: str = "crt_1am" # "crt_1am" | "london_ny" | "combined"
     ) -> Dict[str, Any]:
         """
         Executes an institutional bar-by-bar backtest:
-        - Higher Timeframe Trend & Regime (Discount / Premium)
-        - GUARDEER Volumetric Order Blocks & FVGs
-        - CRT Session Window (London & NY Open only)
-        - Asian Session Sweep Detection
-        - Trailing Breakeven Protection at +1.0R
-        - Strict No-Lookahead-Bias Execution
+        - Strategy 1: 01:00 AM CRT (Episode 8 by Mado):
+            * Asian 9 PM (21:00 NY) 4H reference range (High, Low, 50% Midpoint)
+            * 01:00 AM NY manipulation purge tracking (turtle soup)
+            * 02:00 - 04:00 AM NY high-probability execution window
+            * M15 Model-1 confirmation (Market Structure Shift & Displacement)
+            * Trailing Breakeven protection at +1.0R
+        - Strategy 2: London & NY Killzone CRT (Asian session sweeps & FVGs)
+        - Strategy 3: Combined Institutional CRT Suite
         """
         cfg = SUPPORTED_ASSETS.get(symbol.upper(), {"yf_symbol": symbol, "decimals": 2})
         yf_sym = cfg.get("yf_symbol", symbol)
@@ -42,6 +45,12 @@ class BacktestEngine:
 
             df = df.dropna().copy()
             df.columns = [c.lower() for c in df.columns]
+
+            # Normalize to America/New_York for institutional CRT alignment
+            if df.index.tz is None:
+                df.index = df.index.tz_localize('UTC').tz_convert('America/New_York')
+            else:
+                df.index = df.index.tz_convert('America/New_York')
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
@@ -63,31 +72,33 @@ class BacktestEngine:
         cooldown_bars = 0
         window_size = 40
 
-        # Asian Range Tracking variables (00:00 - 06:00 UTC)
+        # Asian 9 PM NY (21:00 - 01:00 NY) Reference Range
+        ref_9pm_high = 0.0
+        ref_9pm_low = 9999999.0
+        swept_9pm_low = False
+        swept_9pm_high = False
+        purge_low_wick = 9999999.0
+        purge_high_wick = 0.0
+
+        # Standard Asian Range (20:00 - 02:00 NY)
         asian_high = 0.0
         asian_low = 9999999.0
         last_day = None
+
+        # 50-period SMA for Higher Timeframe (4H) trend filter
+        sma50 = pd.Series(closes).rolling(50).mean().values
 
         for i in range(window_size, n):
             ts = timestamps[i]
             day = ts.date()
             hour = ts.hour
+            minute = ts.minute
             
             curr_h = highs[i]
             curr_l = lows[i]
             curr_c = closes[i]
             curr_o = opens[i]
             curr_time = str(ts)
-
-            # Update Asian Range
-            if day != last_day:
-                last_day = day
-                asian_high = 0.0
-                asian_low = 9999999.0
-
-            if 0 <= hour <= 6:
-                asian_high = max(asian_high, curr_h)
-                asian_low = min(asian_low, curr_l)
 
             # 1. Manage Active Trade
             if active_trade is not None:
@@ -160,139 +171,243 @@ class BacktestEngine:
                 cooldown_bars -= 1
                 continue
 
-            # 2. Session Window Filter (London 07-11 UTC & NY 12-16 UTC)
-            if apply_crt_filter and symbol.upper() != "BTCUSD":
-                is_london = 7 <= hour <= 11
-                is_ny = 12 <= hour <= 16
-                if not (is_london or is_ny):
-                    continue # Disallow trading during off-peak chop
+            # Update Day & Reference Ranges
+            if day != last_day:
+                last_day = day
+                asian_high = 0.0
+                asian_low = 9999999.0
 
-            # 3. Technical Structure Analysis
-            sub_df = df.iloc[i - window_size : i]
-            sub_highs = sub_df['high'].values
-            sub_lows = sub_df['low'].values
-            sub_closes = sub_df['close'].values
+            # Build Standard Asian Range (20:00 - 02:00 NY)
+            if hour >= 20 or hour <= 2:
+                asian_high = max(asian_high, curr_h)
+                asian_low = min(asian_low, curr_l)
 
-            range_high = sub_highs.max()
-            range_low = sub_lows.min()
-            equilibrium = (range_high + range_low) / 2.0
+            # Build 9 PM (21:00) NY Reference Candle (hours 21, 22, 23, 0 NY)
+            if hour in [21, 22, 23, 0]:
+                if hour == 21 and minute == 0:
+                    ref_9pm_high = curr_h
+                    ref_9pm_low = curr_l
+                    swept_9pm_low = False
+                    swept_9pm_high = False
+                    purge_low_wick = 9999999.0
+                    purge_high_wick = 0.0
+                else:
+                    ref_9pm_high = max(ref_9pm_high, curr_h)
+                    ref_9pm_low = min(ref_9pm_low, curr_l)
 
-            # Trend & Momentum
-            sma20 = sub_closes[-20:].mean()
-            is_bullish = curr_c > sma20 and curr_c > sub_closes[-4]
-            is_bearish = curr_c < sma20 and curr_c < sub_closes[-4]
+            # -------------------------------------------------------------------
+            # STRATEGY MODEL A: 01:00 AM CRT MODEL (Episode 8 by Mado)
+            # -------------------------------------------------------------------
+            if strategy_model in ["crt_1am", "combined"]:
+                # 01:00 AM Candle (01:00 - 02:00 NY): Manipulation & Purge Window
+                # Beginners strictly avoid trading here; track turtle soup purge
+                if hour == 1:
+                    if ref_9pm_high > 0 and curr_h > ref_9pm_high:
+                        swept_9pm_high = True
+                        purge_high_wick = max(purge_high_wick, curr_h)
+                    if ref_9pm_low < 999999 and curr_l < ref_9pm_low:
+                        swept_9pm_low = True
+                        purge_low_wick = min(purge_low_wick, curr_l)
 
-            # Sweep Check: Asian Low swept for Buy, Asian High swept for Sell
-            has_swept_low = (curr_l < asian_low and curr_c > asian_low) if asian_low < 999999 else (curr_l < sub_lows[-10:].min())
-            has_swept_high = (curr_h > asian_high and curr_c < asian_high) if asian_high > 0 else (curr_h > sub_highs[-10:].max())
+                # 02:00 - 04:00 AM NY: High-Probability Execution Window
+                elif hour in [2, 3]:
+                    if swept_9pm_high and curr_h > purge_high_wick:
+                        purge_high_wick = curr_h
+                    if swept_9pm_low and curr_l < purge_low_wick:
+                        purge_low_wick = curr_l
 
-            # Detect Recent Fair Value Gap (in previous 4 bars)
-            fvg_bull = False
-            fvg_bear = False
-            for k in range(len(sub_df) - 4, len(sub_df) - 1):
-                if sub_lows[k] > sub_highs[k - 2] and sub_closes[k - 1] > sub_df['open'].iloc[k - 1]:
-                    fvg_bull = True
-                elif sub_highs[k] < sub_lows[k - 2] and sub_closes[k - 1] < sub_df['open'].iloc[k - 1]:
-                    fvg_bear = True
+                    # HTF Filter alignment
+                    htf_trend_bull = curr_c >= sma50[i] if not np.isnan(sma50[i]) else True
+                    htf_trend_bear = curr_c <= sma50[i] if not np.isnan(sma50[i]) else True
 
-            # LONG TRIGGER: Bullish trend + Discount Zone + (Sweep OR FVG)
-            if is_bullish and curr_c < equilibrium and (has_swept_low or fvg_bull):
-                entry = curr_c
-                sl = (range_low * 0.999) if "XAU" in symbol or "BTC" in symbol else (range_low - 0.0015)
-                risk_dist = entry - sl
-                if risk_dist > 0:
-                    tp = entry + (risk_dist * rr_target)
-                    active_trade = {
-                        "trade_num": len(trades) + 1,
-                        "entry_time": curr_time,
-                        "symbol": symbol,
-                        "direction": "BUY",
-                        "entry_price": round(entry, cfg["decimals"]),
-                        "stop_loss": round(sl, cfg["decimals"]),
-                        "take_profit": round(tp, cfg["decimals"]),
-                        "risk_dist": risk_dist,
-                        "setup_type": "London/NY CRT Bullish Sweep & FVG" if apply_crt_filter else "Standard Bullish FVG"
-                    }
+                    # 1AM CRT LONG: Asian Low Swept + M15 Model-1 Close back above
+                    if swept_9pm_low and curr_c > ref_9pm_low and purge_low_wick < ref_9pm_low and (not apply_crt_filter or htf_trend_bull):
+                        entry = curr_c
+                        sl_offset = (purge_low_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
+                        sl = purge_low_wick - sl_offset
+                        risk_dist = entry - sl
+                        if risk_dist > 0 and (risk_dist / entry) < 0.02:
+                            tp = entry + (risk_dist * rr_target)
+                            active_trade = {
+                                "trade_num": len(trades) + 1,
+                                "entry_time": curr_time,
+                                "symbol": symbol,
+                                "direction": "BUY",
+                                "entry_price": round(entry, cfg["decimals"]),
+                                "stop_loss": round(sl, cfg["decimals"]),
+                                "take_profit": round(tp, cfg["decimals"]),
+                                "risk_dist": risk_dist,
+                                "setup_type": "01:00 AM CRT Bullish Purge & M15 Model-1"
+                            }
+                            swept_9pm_low = False
+                            continue
+
+                    # 1AM CRT SHORT: Asian High Swept + M15 Model-1 Close back below
+                    elif swept_9pm_high and curr_c < ref_9pm_high and purge_high_wick > ref_9pm_high and (not apply_crt_filter or htf_trend_bear):
+                        entry = curr_c
+                        sl_offset = (purge_high_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
+                        sl = purge_high_wick + sl_offset
+                        risk_dist = sl - entry
+                        if risk_dist > 0 and (risk_dist / entry) < 0.02:
+                            tp = entry - (risk_dist * rr_target)
+                            active_trade = {
+                                "trade_num": len(trades) + 1,
+                                "entry_time": curr_time,
+                                "symbol": symbol,
+                                "direction": "SELL",
+                                "entry_price": round(entry, cfg["decimals"]),
+                                "stop_loss": round(sl, cfg["decimals"]),
+                                "take_profit": round(tp, cfg["decimals"]),
+                                "risk_dist": risk_dist,
+                                "setup_type": "01:00 AM CRT Bearish Purge & M15 Model-1"
+                            }
+                            swept_9pm_high = False
+                            continue
+
+            # -------------------------------------------------------------------
+            # STRATEGY MODEL B: LONDON & NY KILLZONE CRT MODEL (02-05 & 08-11 NY)
+            # -------------------------------------------------------------------
+            if strategy_model in ["london_ny", "combined"]:
+                is_london = 2 <= hour <= 5
+                is_ny = 8 <= hour <= 11
+                if apply_crt_filter and not (is_london or is_ny):
                     continue
 
-            # SHORT TRIGGER: Bearish trend + Premium Zone + (Sweep OR FVG)
-            elif is_bearish and curr_c > equilibrium and (has_swept_high or fvg_bear):
-                entry = curr_c
-                sl = (range_high * 1.001) if "XAU" in symbol or "BTC" in symbol else (range_high + 0.0015)
-                risk_dist = sl - entry
-                if risk_dist > 0:
-                    tp = entry - (risk_dist * rr_target)
-                    active_trade = {
-                        "trade_num": len(trades) + 1,
-                        "entry_time": curr_time,
-                        "symbol": symbol,
-                        "direction": "SELL",
-                        "entry_price": round(entry, cfg["decimals"]),
-                        "stop_loss": round(sl, cfg["decimals"]),
-                        "take_profit": round(tp, cfg["decimals"]),
-                        "risk_dist": risk_dist,
-                        "setup_type": "London/NY CRT Bearish Sweep & FVG" if apply_crt_filter else "Standard Bearish FVG"
-                    }
-                    continue
+                sub_df = df.iloc[i - window_size : i]
+                sub_highs = sub_df['high'].values
+                sub_lows = sub_df['low'].values
+                sub_closes = sub_df['close'].values
 
-        # 4. Performance Statistics
+                range_high = sub_highs.max()
+                range_low = sub_lows.min()
+                equilibrium = (range_high + range_low) / 2.0
+
+                sma20 = sub_closes[-20:].mean()
+                is_bullish = curr_c > sma20 and curr_c > sub_closes[-4]
+                is_bearish = curr_c < sma20 and curr_c < sub_closes[-4]
+
+                has_swept_low = (curr_l < asian_low and curr_c > asian_low) if asian_low < 999999 else (curr_l < sub_lows[-10:].min())
+                has_swept_high = (curr_h > asian_high and curr_c < asian_high) if asian_high > 0 else (curr_h > sub_highs[-10:].max())
+
+                fvg_bull = False
+                fvg_bear = False
+                for k in range(len(sub_df) - 4, len(sub_df) - 1):
+                    if sub_lows[k] > sub_highs[k - 2] and sub_closes[k - 1] > sub_df['open'].iloc[k - 1]:
+                        fvg_bull = True
+                    elif sub_highs[k] < sub_lows[k - 2] and sub_closes[k - 1] < sub_df['open'].iloc[k - 1]:
+                        fvg_bear = True
+
+                if is_bullish and curr_c < equilibrium and (has_swept_low or fvg_bull):
+                    entry = curr_c
+                    sl = (range_low * 0.999) if "XAU" in symbol or "BTC" in symbol else (range_low - 0.0015)
+                    risk_dist = entry - sl
+                    if risk_dist > 0:
+                        tp = entry + (risk_dist * rr_target)
+                        active_trade = {
+                            "trade_num": len(trades) + 1,
+                            "entry_time": curr_time,
+                            "symbol": symbol,
+                            "direction": "BUY",
+                            "entry_price": round(entry, cfg["decimals"]),
+                            "stop_loss": round(sl, cfg["decimals"]),
+                            "take_profit": round(tp, cfg["decimals"]),
+                            "risk_dist": risk_dist,
+                            "setup_type": "London/NY CRT Bullish Sweep & FVG"
+                        }
+                        continue
+
+                elif is_bearish and curr_c > equilibrium and (has_swept_high or fvg_bear):
+                    entry = curr_c
+                    sl = (range_high * 1.001) if "XAU" in symbol or "BTC" in symbol else (range_high + 0.0015)
+                    risk_dist = sl - entry
+                    if risk_dist > 0:
+                        tp = entry - (risk_dist * rr_target)
+                        active_trade = {
+                            "trade_num": len(trades) + 1,
+                            "entry_time": curr_time,
+                            "symbol": symbol,
+                            "direction": "SELL",
+                            "entry_price": round(entry, cfg["decimals"]),
+                            "stop_loss": round(sl, cfg["decimals"]),
+                            "take_profit": round(tp, cfg["decimals"]),
+                            "risk_dist": risk_dist,
+                            "setup_type": "London/NY CRT Bearish Sweep & FVG"
+                        }
+                        continue
+
+        # Performance Statistics
         total_trades = len(trades)
         if total_trades == 0:
             return {
                 "status": "success",
                 "symbol": symbol,
-                "total_trades": 0,
-                "win_rate": 0.0,
+                "period": period,
+                "timeframe": timeframe,
+                "strategy_model": strategy_model,
+                "initial_capital": self.initial_capital,
+                "final_capital": self.initial_capital,
                 "net_profit": 0.0,
+                "net_return_pct": 0.0,
+                "total_trades": 0,
+                "wins": 0,
+                "losses": 0,
+                "breakevens": 0,
+                "win_rate": 0.0,
                 "profit_factor": 0.0,
+                "risk_reward_ratio": rr_target,
                 "max_drawdown_pct": 0.0,
-                "trades": [],
-                "equity_curve": []
+                "equity_curve": equity_curve,
+                "recent_trades": []
             }
 
         wins = [t for t in trades if t["outcome"] == "WIN"]
         losses = [t for t in trades if t["outcome"] == "LOSS"]
         breakevens = [t for t in trades if t["outcome"] == "BREAKEVEN"]
 
-        win_rate = (len(wins) / total_trades) * 100.0
+        num_wins = len(wins)
+        num_losses = len(losses)
+        num_be = len(breakevens)
+        win_rate = round((num_wins / total_trades) * 100, 1)
+
         gross_profit = sum(t["pnl"] for t in wins)
         gross_loss = abs(sum(t["pnl"] for t in losses))
-        profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else 99.9
+        profit_factor = round(gross_profit / gross_loss, 2) if gross_loss > 0 else (99.0 if gross_profit > 0 else 0.0)
 
-        net_profit = capital - self.initial_capital
-        net_return_pct = (net_profit / self.initial_capital) * 100.0
+        net_profit = round(capital - self.initial_capital, 2)
+        net_return_pct = round((net_profit / self.initial_capital) * 100, 2)
 
-        # Maximum Drawdown
-        equity_values = [p["equity"] for p in equity_curve]
-        peak = equity_values[0]
-        max_dd_pct = 0.0
-        for val in equity_values:
-            if val > peak:
-                peak = val
-            dd = ((peak - val) / peak) * 100.0
-            if dd > max_dd_pct:
-                max_dd_pct = dd
+        # Max Drawdown Calculation
+        peak = self.initial_capital
+        max_dd = 0.0
+        for pt in equity_curve:
+            eq = pt["equity"]
+            if eq > peak:
+                peak = eq
+            dd = (peak - eq) / peak * 100.0
+            if dd > max_dd:
+                max_dd = dd
 
         return {
             "status": "success",
             "symbol": symbol,
             "period": period,
             "timeframe": timeframe,
+            "strategy_model": strategy_model,
             "apply_crt_filter": apply_crt_filter,
             "initial_capital": self.initial_capital,
             "final_capital": round(capital, 2),
-            "net_profit": round(net_profit, 2),
-            "net_return_pct": round(net_return_pct, 2),
+            "net_profit": net_profit,
+            "net_return_pct": net_return_pct,
             "total_trades": total_trades,
-            "wins": len(wins),
-            "losses": len(losses),
-            "breakevens": len(breakevens),
-            "win_rate": round(win_rate, 1),
-            "profit_factor": round(profit_factor, 2),
+            "wins": num_wins,
+            "losses": num_losses,
+            "breakevens": num_be,
+            "win_rate": win_rate,
+            "profit_factor": profit_factor,
             "risk_reward_ratio": rr_target,
-            "max_drawdown_pct": round(max_dd_pct, 2),
+            "max_drawdown_pct": round(max_dd, 2),
             "equity_curve": equity_curve[-25:],
-            "recent_trades": trades[-12:]
+            "recent_trades": trades[-15:]
         }
 
 backtest_engine = BacktestEngine()

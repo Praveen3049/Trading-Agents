@@ -1,0 +1,72 @@
+Here is a complete, institutional-grade breakdown of the **01:00 AM CRT (Candle Range Theory)** trading model presented in Episode 8 of the 2026 CRT Mentorship:
+
+---
+
+### 1. Core Strategy Concept (What is 1AM CRT?)
+* **Definition:** CRT (Candle Range Theory) posits that **Time is more important than Price**. If the time is right, the pattern works; if the time is wrong, the pattern fails.
+* **The 1AM CRT:** Trading a single **4-hour (4H) candle** that opens at **01:00 AM**. 
+* **Philosophy:** It is one of the cleanest, most precise demonstrations of institutional algorithms reacting during the most liquid session of the day (London Killzone) interacting with previously built institutional reference levels.
+
+---
+
+### 2. Session Timings & Key Ranges
+* **Instrument-Specific Opening Times for the Key 4H Candle:**
+  * **Forex:** Key 4H candle starts at **01:00 AM**.
+  * **Indices:** Key 4H candle shifts to **02:00 AM**. *(Crucial distinction to avoid applying wrong times to instruments).*
+* **The Reference Range (Asia Range):**
+  * Represented by the **9:00 PM (21:00) 4H Candle**. 
+  * The 9 PM candle defines the Asian range (High, Low, and Midpoint / 50%).
+* **Execution & Key High-Probability Windows:**
+  * **02:00 AM – 03:00 AM**
+  * **03:00 AM – 04:00 AM**
+  * *Note on 01:00 AM – 02:00 AM:* Manipulation-heavy and unpredictable; beginners are strictly advised to **avoid** trading this first hour.
+
+---
+
+### 3. OHLC / OLHC Mechanics (Anatomy of the Setup)
+The model splits into two primary intraday profiles depending on whether the 9 PM or 1 AM candle drives the manipulation:
+
+#### Profile 1: Normal Protraction Profile (Standard)
+1. **9 PM Candle (Asian Range):** Acts as the initial consolidation / range.
+2. **1 AM Candle (Manipulation & Expansion):** 
+   * **Open Low / Open High:** Purges the 9 PM candle’s liquidity extreme (the "turtle soup" / sweep of the Asia Low or High).
+   * **The Purge is Fuel:** The sweep of liquidity provides the algorithmic fuel for the subsequent directional expansion.
+   * **Expansion:** Price expands outward in the true directional move.
+
+#### Profile 2: Delayed Protraction Profile
+1. **9 PM Candle:** Performs the liquidity sweep / manipulation directly.
+2. **1 AM Candle:** Becomes pure expansion (continuing the move initiated by the 9 PM candle).
+
+---
+
+### 4. Setup Confirmation & Trigger Rules (Step-by-Step Execution)
+* **Step 1 (Higher Timeframe Context):** Establish clear Higher Timeframe (4H) order flow (e.g., Bullish Order Flow: rejecting lows, breaking highs, creating higher highs and higher lows).
+* **Step 2 (Key Level & SMT):** Identify a key structural level for sponsorship supported by SMT confirmation.
+* **Step 3 (The Purge / Turtle Soup):** Wait for price to approach the key level and **sweep (purge)** the 9 PM range extreme (e.g., 9 PM Low).
+* **Step 4 (Lower Timeframe Confirmation - M15 Entry Model 1):**
+  * Drop to the **15-Minute (M15) chart**.
+  * Wait for **Model-1 Confirmation**: A clear change in the state of delivery (shift in market structure / break of structure following the liquidity sweep).
+  * **Rule:** *Never enter on the purge/sweep itself.* The sweep is just fuel; you must wait for the M15 Model-1 close and confirmation.
+
+---
+
+### 5. Stop Loss & Invalidation Rules
+* **Stop Loss Placement:** Placed safely **above the Model-1 High** (for short setups) or **below the Model-1 Low** (for long setups).
+* **Invalidation:** If price breaches the structural extreme of the execution model without confirmation, or if execution occurs outside the defined institutional time windows.
+
+---
+
+### 6. Targets / Draw on Liquidity (DOL)
+* **Target:** The opposite side of the 4H range (e.g., targeting the high of the range when long from a purged low).
+* **Risk-to-Reward:** Highly structured, repeatable setups designed for clean 3R+ targets.
+
+---
+
+### 7. Concrete Rules for Algorithmic Trading Agents
+1. **Filter by Asset Class:** Set anchor candle to `01:00` for Forex pairs and `02:00` for Indices.
+2. **Establish HTF Bias:** Only execute if Higher Timeframe (4H) Order Flow aligns with the anticipated expansion direction.
+3. **Identify Reference Range:** Define the High, Low, and 50% Midpoint of the `21:00` (9 PM) 4H candle.
+4. **Wait for Liquidity Purge:** Algorithm must log a sweep of the `21:00` candle extreme (High or Low) occurring around the `01:00` to `05:00` window.
+5. **Enforce Time Restrictions:** Block entries during the `01:00 – 02:00` window (too much noise/manipulation); prioritize entries inside the `02:00 – 04:00` high-probability window.
+6. **Trigger Execution:** Drop to M15 timeframe, confirm **Model-1** (Market Structure Shift / Displacement), execute trade upon candle close confirmation.
+7. **Risk Management:** Set Stop Loss beyond the M15 Model structural extreme; set Take Profit at the opposing 4H range liquidity pool.

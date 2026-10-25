@@ -31,6 +31,7 @@ class BacktestRequest(BaseModel):
     period: str = "60d"
     rr_target: float = 2.0
     apply_crt_filter: bool = True
+    strategy_model: Optional[str] = "crt_1am"
 
 class APIKeysUpdate(BaseModel):
     gemini_key: Optional[str] = None
@@ -49,7 +50,8 @@ def run_backtest_endpoint(req: BacktestRequest):
         timeframe=req.timeframe,
         period=req.period,
         rr_target=req.rr_target,
-        apply_crt_filter=req.apply_crt_filter
+        apply_crt_filter=req.apply_crt_filter,
+        strategy_model=req.strategy_model or "crt_1am"
     )
 
 @app.get("/api/assets")
