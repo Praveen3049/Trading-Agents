@@ -2,16 +2,33 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, CandlestickSeries } from 'lightweight-charts';
 
+const CORE_ASSETS = [
+  { symbol: "XAUUSD", name: "Gold / USD", icon: "🟡", category: "Metals" },
+  { symbol: "EURUSD", name: "Euro / USD", icon: "🔵", category: "Forex" },
+  { symbol: "GBPUSD", name: "Pound / USD", icon: "🟣", category: "Forex" },
+  { symbol: "XAGUSD", name: "Silver / USD", icon: "⚪", category: "Metals" },
+  { symbol: "BTCUSD", name: "Bitcoin / USD", icon: "🟠", category: "Crypto" },
+];
+
+const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"];
+
 export default function Dashboard() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartInstanceRef = useRef<any>(null);
+  const seriesInstanceRef = useRef<any>(null);
+
+  const [ticker, setTicker] = useState("XAUUSD");
+  const [timeframe, setTimeframe] = useState("5m");
+  const [marketInfo, setMarketInfo] = useState<any>(null);
   const [analysis, setAnalysis] = useState<any>(null);
   const [aiStatus, setAiStatus] = useState<any>(null);
-  const [ticker, setTicker] = useState("BTCUSDT");
+
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [geminiKeyInput, setGeminiKeyInput] = useState("");
   const [openaiKeyInput, setOpenaiKeyInput] = useState("");
   const [preferredProvider, setPreferredProvider] = useState("gemini");
   const [isSavingKeys, setIsSavingKeys] = useState(false);
+  const [isLoadingChart, setIsLoadingChart] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fetch AI Status
@@ -30,14 +47,42 @@ export default function Dashboard() {
     }
   };
 
+  // Fetch real market candles & feed to TradingView
+  const fetchMarketCandles = async (sym: string, tf: string) => {
+    setIsLoadingChart(true);
+    try {
+      const res = await fetch("http://localhost:8000/api/market-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticker: sym, timeframe: tf })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const data = json.data;
+        setMarketInfo(data);
+
+        if (seriesInstanceRef.current && data.candles && data.candles.length > 0) {
+          seriesInstanceRef.current.setData(data.candles);
+          if (chartInstanceRef.current) {
+            chartInstanceRef.current.timeScale().fitContent();
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load real market candles:", err);
+    } finally {
+      setIsLoadingChart(false);
+    }
+  };
+
   // Run or refresh analysis
-  const fetchAnalysis = async () => {
+  const fetchAnalysis = async (sym: string) => {
     setIsRefreshing(true);
     try {
       const res = await fetch("http://localhost:8000/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticker, timeframe: "5M" })
+        body: JSON.stringify({ ticker: sym, timeframe })
       });
       if (res.ok) {
         const data = await res.json();
@@ -73,7 +118,7 @@ export default function Dashboard() {
         setShowKeyModal(false);
         setGeminiKeyInput("");
         setOpenaiKeyInput("");
-        fetchAnalysis();
+        fetchAnalysis(ticker);
       }
     } catch (err) {
       console.error("Error saving keys:", err);
@@ -82,44 +127,39 @@ export default function Dashboard() {
     }
   };
 
+  // Initialize TradingView Chart Once
   useEffect(() => {
     fetchAiStatus();
-  }, []);
 
-  useEffect(() => {
-    // Initialize TradingView Lightweight Chart
     if (!chartContainerRef.current) return;
-    
+
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { color: '#0f172a' }, // slate-900
+        background: { color: '#090d16' }, // deep sleek dark
         textColor: '#94a3b8',
       },
       grid: {
-        vertLines: { color: '#1e293b' },
-        horzLines: { color: '#1e293b' },
+        vertLines: { color: '#131b2e' },
+        horzLines: { color: '#131b2e' },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 420,
+      height: 440,
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: false,
+      }
     });
 
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#10b981',
-      downColor: '#ef4444',
+      downColor: '#f43f5e',
       borderVisible: false,
       wickUpColor: '#10b981',
-      wickDownColor: '#ef4444',
+      wickDownColor: '#f43f5e',
     });
 
-    // Mock initial data
-    const mockData = [
-      { time: '2026-10-01', open: 66200, high: 66900, low: 66050, close: 66800 },
-      { time: '2026-10-02', open: 66800, high: 67450, low: 66700, close: 67300 },
-      { time: '2026-10-03', open: 67300, high: 67800, low: 67100, close: 67500 },
-      { time: '2026-10-04', open: 67500, high: 67600, low: 66800, close: 67050 },
-      { time: '2026-10-05', open: 67050, high: 67900, low: 67000, close: 67650 },
-    ];
-    candlestickSeries.setData(mockData);
+    chartInstanceRef.current = chart;
+    seriesInstanceRef.current = candlestickSeries;
 
     const handleResize = () => {
       if (chartContainerRef.current) {
@@ -128,46 +168,58 @@ export default function Dashboard() {
     };
     window.addEventListener('resize', handleResize);
 
-    fetchAnalysis();
-
     return () => {
       window.removeEventListener('resize', handleResize);
       chart.remove();
     };
-  }, [ticker]);
+  }, []);
+
+  // Whenever ticker or timeframe changes, pull real market candles and rerun analysis
+  useEffect(() => {
+    fetchMarketCandles(ticker, timeframe);
+    fetchAnalysis(ticker);
+  }, [ticker, timeframe]);
 
   const hasActiveLLM = aiStatus?.gemini_configured || aiStatus?.openai_configured;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10 font-sans">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 font-sans">
+      <div className="max-w-7xl mx-auto space-y-5">
         
         {/* Navigation / Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900/90 border border-slate-800/80 p-5 rounded-2xl shadow-xl backdrop-blur-md">
           <div>
             <div className="flex items-center gap-3">
               <span className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                <span className="text-emerald-400">⚡</span> AGENTIC DESK
+                <span className="text-emerald-400">⚡</span> AGENTIC TRADING DESK
               </span>
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold uppercase tracking-wider">
                 Multi-Agent System
               </span>
             </div>
-            <p className="text-slate-400 text-sm mt-1 flex items-center gap-2">
+            <p className="text-slate-400 text-xs md:text-sm mt-1 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-              Autonomous continuous analysis active on <span className="font-semibold text-white">{ticker}</span>
+              Live market intelligence & autonomous reasoning on <span className="font-bold text-white">{ticker}</span>
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            {/* Feed Source Indicator */}
+            <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-1.5 text-xs">
+              <span className={`w-2.5 h-2.5 rounded-full ${marketInfo?.source === 'mt5' ? 'bg-emerald-400' : 'bg-blue-400 animate-pulse'}`}></span>
+              <span className="font-mono text-slate-300">
+                {marketInfo?.source === 'mt5' ? "MT5 Broker Feed" : "Live Market Feed"}
+              </span>
+            </div>
+
             {/* AI Status Badge */}
-            <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700/60 rounded-xl px-3 py-1.5 text-xs">
+            <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-1.5 text-xs">
               <span className={`w-2.5 h-2.5 rounded-full ${hasActiveLLM ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
               <span className="font-medium text-slate-300">
                 {hasActiveLLM ? (
-                  aiStatus?.gemini_configured ? "Gemini 2.5 Active" : "OpenAI GPT-4o Active"
+                  aiStatus?.gemini_configured ? "Gemini 3.5 AI" : "GPT-4o Mini AI"
                 ) : (
-                  "Rule Engine (No API Key)"
+                  "Rule Engine"
                 )}
               </span>
             </div>
@@ -175,27 +227,19 @@ export default function Dashboard() {
             {/* API Keys Configuration Button */}
             <button
               onClick={() => setShowKeyModal(true)}
-              className="flex items-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition"
+              className="flex items-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition"
             >
-              <span>🔑</span> API Keys
+              <span>🔑</span> Keys
             </button>
-
-            {/* Ticker Input */}
-            <div className="relative">
-              <input 
-                type="text" 
-                value={ticker}
-                onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                placeholder="Ticker"
-                className="bg-slate-950 border border-slate-700 rounded-xl px-4 py-1.5 text-white font-mono font-bold text-sm tracking-wider w-32 focus:outline-none focus:border-emerald-500 transition"
-              />
-            </div>
 
             {/* Refresh Button */}
             <button
-              onClick={fetchAnalysis}
-              disabled={isRefreshing}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 disabled:opacity-50"
+              onClick={() => {
+                fetchMarketCandles(ticker, timeframe);
+                fetchAnalysis(ticker);
+              }}
+              disabled={isRefreshing || isLoadingChart}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 disabled:opacity-50"
             >
               <span className={isRefreshing ? "animate-spin" : ""}>🔄</span>
               {isRefreshing ? "Analyzing..." : "Refresh"}
@@ -203,17 +247,57 @@ export default function Dashboard() {
           </div>
         </header>
 
+        {/* 5 Core Assets Quick-Switch Bar */}
+        <div className="bg-slate-900/60 border border-slate-800/80 p-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs uppercase font-extrabold text-slate-500 px-2 tracking-wider">Traded Pairs:</span>
+            {CORE_ASSETS.map((asset) => {
+              const isActive = ticker === asset.symbol;
+              return (
+                <button
+                  key={asset.symbol}
+                  onClick={() => setTicker(asset.symbol)}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                    isActive 
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-md shadow-emerald-950/50 scale-[1.02]' 
+                      : 'bg-slate-950/60 hover:bg-slate-800 text-slate-300 border border-slate-800/80 hover:border-slate-700'
+                  }`}
+                >
+                  <span className="text-sm">{asset.icon}</span>
+                  <span>{asset.symbol}</span>
+                  <span className="text-[10px] text-slate-500 hidden sm:inline font-normal">({asset.name})</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Current Live Price Banner */}
+          {marketInfo && (
+            <div className="flex items-center gap-3 px-3 py-1 bg-slate-950/80 rounded-xl border border-slate-800">
+              <span className="text-xs text-slate-400 font-medium">{ticker}:</span>
+              <span className="text-base font-black font-mono text-white">
+                {marketInfo.current_price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}
+              </span>
+              <span className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded ${
+                (marketInfo.change_percent ?? 0) >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+              }`}>
+                {(marketInfo.change_percent ?? 0) >= 0 ? '+' : ''}{marketInfo.change_percent}%
+              </span>
+            </div>
+          )}
+        </div>
+
         {/* Master Trade Verdict Banner */}
         {analysis?.master_plan && (
           <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-emerald-500/30 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 transform translate-x-4 -translate-y-4 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
             
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4 mb-4">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="text-xs uppercase font-extrabold tracking-widest text-slate-400">Master Execution Plan</span>
-                <span className={`px-3 py-1 rounded-lg text-sm font-black tracking-wide ${
-                  analysis.master_plan.verdict.includes('BUY') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' :
-                  analysis.master_plan.verdict.includes('SELL') ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
+                <span className={`px-3.5 py-1 rounded-xl text-sm font-black tracking-wide ${
+                  analysis.master_plan.verdict.includes('BUY') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm shadow-emerald-950' :
+                  analysis.master_plan.verdict.includes('SELL') ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-sm shadow-rose-950' :
                   'bg-amber-500/20 text-amber-400 border border-amber-500/40'
                 }`}>
                   {analysis.master_plan.verdict}
@@ -230,20 +314,20 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-mono">
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-                <span className="text-slate-400 text-xs block font-sans">Optimal Entry</span>
+              <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+                <span className="text-slate-400 text-xs block font-sans mb-1">Optimal Entry Zone</span>
                 <span className="font-bold text-emerald-400 text-base">{analysis.master_plan.entry_zone}</span>
               </div>
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-                <span className="text-slate-400 text-xs block font-sans">Stop Loss</span>
+              <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+                <span className="text-slate-400 text-xs block font-sans mb-1">Stop Loss</span>
                 <span className="font-bold text-rose-400 text-base">{analysis.master_plan.stop_loss}</span>
               </div>
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-                <span className="text-slate-400 text-xs block font-sans">Target 1 (TP1)</span>
+              <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+                <span className="text-slate-400 text-xs block font-sans mb-1">Target 1 (TP1)</span>
                 <span className="font-bold text-sky-400 text-base">{analysis.master_plan.take_profit_1}</span>
               </div>
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-                <span className="text-slate-400 text-xs block font-sans">Target 2 (TP2)</span>
+              <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+                <span className="text-slate-400 text-xs block font-sans mb-1">Target 2 (TP2)</span>
                 <span className="font-bold text-indigo-400 text-base">{analysis.master_plan.take_profit_2}</span>
               </div>
             </div>
@@ -259,17 +343,39 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* TradingView Chart Container */}
+        {/* TradingView Chart Container with Timeframe Controls */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
-          <div className="flex justify-between items-center mb-3 px-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Institutional Chart</span>
-              <span className="text-xs font-mono text-slate-500">5M Candlesticks</span>
+          <div className="flex flex-wrap justify-between items-center mb-3 px-2 gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-bold text-white flex items-center gap-1.5">
+                <span>{ticker}</span>
+                <span className="text-xs text-slate-400 font-normal">Real Market Candlestick Chart</span>
+              </span>
+              {isLoadingChart && (
+                <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping"></span> Loading live data...
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span> Live Structure
+
+            {/* Timeframe Buttons */}
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+              {TIMEFRAMES.map((tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setTimeframe(tf)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold uppercase transition ${
+                    timeframe === tf 
+                      ? 'bg-blue-600 text-white shadow-sm' 
+                      : 'text-slate-400 hover:text-white hover:bg-slate-850'
+                  }`}
+                >
+                  {tf}
+                </button>
+              ))}
             </div>
           </div>
+
           <div ref={chartContainerRef} className="w-full rounded-xl overflow-hidden" />
         </div>
 
@@ -301,7 +407,7 @@ export default function Dashboard() {
                     <span className={`font-black text-lg ${analysis.top_down.bias === 'BULLISH' ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {analysis.top_down.bias}
                     </span>
-                    <span className="text-xs text-slate-400 ml-2">({analysis.top_down.confidence_score || 80}% Confidence)</span>
+                    <span className="text-xs text-slate-400 ml-2">({analysis.top_down.confidence_score || 85}% Confidence)</span>
                   </div>
 
                   <div>
@@ -455,7 +561,7 @@ export default function Dashboard() {
                     placeholder={aiStatus?.gemini_configured ? "•••••••• (Key Configured - enter to update)" : "AIzaSy..."}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                   />
-                  <span className="text-[10px] text-slate-500 mt-0.5 block">Recommended: Gemini 2.5 Flash for high-speed macro reasoning.</span>
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">Recommended: Gemini 3.5 Flash for high-speed macro reasoning.</span>
                 </div>
 
                 <div>
@@ -480,7 +586,7 @@ export default function Dashboard() {
                     onChange={(e) => setPreferredProvider(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                   >
-                    <option value="gemini">Google Gemini (Gemini 2.5 Flash)</option>
+                    <option value="gemini">Google Gemini (Gemini 3.5 Flash)</option>
                     <option value="openai">OpenAI (GPT-4o Mini / GPT-4o)</option>
                   </select>
                 </div>
