@@ -75,6 +75,84 @@ export default function Dashboard() {
     }
   };
 
+  const priceLinesRef = useRef<any[]>([]);
+
+  const parsePrice = (val: any): number | null => {
+    if (!val) return null;
+    const match = String(val).match(/([0-9]+(?:\.[0-9]+)?)/);
+    return match ? parseFloat(match[1]) : null;
+  };
+
+  const updateChartOverlays = (plan: any) => {
+    if (!seriesInstanceRef.current || !plan) return;
+
+    // Clear old price lines
+    priceLinesRef.current.forEach((line) => {
+      try {
+        seriesInstanceRef.current.removePriceLine(line);
+      } catch (e) {
+        // ignore if already removed
+      }
+    });
+    priceLinesRef.current = [];
+
+    // Entry level
+    const entryPrice = parsePrice(plan.entry_zone);
+    if (entryPrice) {
+      const entryLine = seriesInstanceRef.current.createPriceLine({
+        price: entryPrice,
+        color: '#10b981',
+        lineWidth: 2,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: 'ENTRY ZONE',
+      });
+      priceLinesRef.current.push(entryLine);
+    }
+
+    // Stop loss
+    const slPrice = parsePrice(plan.stop_loss);
+    if (slPrice) {
+      const slLine = seriesInstanceRef.current.createPriceLine({
+        price: slPrice,
+        color: '#f43f5e',
+        lineWidth: 2,
+        lineStyle: 2, // Dashed
+        axisLabelVisible: true,
+        title: 'STOP LOSS',
+      });
+      priceLinesRef.current.push(slLine);
+    }
+
+    // Target 1
+    const tp1Price = parsePrice(plan.take_profit_1);
+    if (tp1Price) {
+      const tp1Line = seriesInstanceRef.current.createPriceLine({
+        price: tp1Price,
+        color: '#38bdf8',
+        lineWidth: 2,
+        lineStyle: 1, // Dotted
+        axisLabelVisible: true,
+        title: 'TARGET 1',
+      });
+      priceLinesRef.current.push(tp1Line);
+    }
+
+    // Target 2
+    const tp2Price = parsePrice(plan.take_profit_2);
+    if (tp2Price) {
+      const tp2Line = seriesInstanceRef.current.createPriceLine({
+        price: tp2Price,
+        color: '#818cf8',
+        lineWidth: 2,
+        lineStyle: 1, // Dotted
+        axisLabelVisible: true,
+        title: 'TARGET 2',
+      });
+      priceLinesRef.current.push(tp2Line);
+    }
+  };
+
   // Run or refresh analysis
   const fetchAnalysis = async (sym: string) => {
     setIsRefreshing(true);
@@ -89,6 +167,9 @@ export default function Dashboard() {
         setAnalysis(data.analysis);
         if (data.llm_status) {
           setAiStatus(data.llm_status);
+        }
+        if (data.analysis?.master_plan) {
+          updateChartOverlays(data.analysis.master_plan);
         }
       }
     } catch (err) {
