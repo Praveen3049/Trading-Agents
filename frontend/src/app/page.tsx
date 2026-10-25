@@ -844,6 +844,7 @@ export default function Dashboard() {
               <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-mono">
                 {[
                   { id: "crt_1am", label: "01:00 AM CRT (Ep 8)", icon: "🎯" },
+                  { id: "crt_9am", label: "09:00 AM CRT (Ep 11)", icon: "🗽" },
                   { id: "london_ny", label: "London/NY CRT", icon: "🏛️" },
                   { id: "combined", label: "Combined Suite", icon: "⚡" },
                 ].map((m) => (

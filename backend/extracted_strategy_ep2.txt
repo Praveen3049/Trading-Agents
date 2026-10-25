@@ -1,0 +1,127 @@
+### **MENTORSHIP BREAKDOWN REPORT**
+**Video Title:** *HOW TO TRADE 9 AM CRT — Everything about 9 AM CRT*  
+**Channel/Author:** *MadoCRT (Developing Institutional Mind — Inside C3)*
+
+---
+
+### **1. Video Title & Author Concept**
+* **Title:** *How to Trade 9 AM CRT (Candle Range Theory)*
+* **Author Concept:** MadoCRT’s C3 mentorship framework treats CRT (Candle Range Theory) not as a simple candlestick pattern, but as an institutional framework mapping out institutional price delivery. This specific video covers the **9:00 AM CRT** (Candle Range Theory) across Forex pairs and Indices, highlighting intraday profiling, key time windows, order flow alignment, and algorithmic execution models.
+
+---
+
+### **2. Core Strategy Model**
+* **Primary Concept:** The **9:00 AM 4-Hour CRT (Candle Range Theory)**.
+* **Intraday Profiles:** 
+  1. **New York Reversal (Versions 1.1 & 1.2)**
+  2. **New York Continuation (Versions 1.1 & 1.2)**
+* **Mechanic:** The 9:00 AM candle (acting as the key 4-hour range for Forex) encapsulates previous sessions (Asia, London, London Lunch) and builds liquidity before experiencing manipulation (Turtle Soup) followed by an expansion phase in the NY Kill Zone.
+
+---
+
+### **3. Timeframes, Session Timings & Key Reference Ranges**
+* **Primary Timeframe for CRT Profiling:** 4-Hour (4H) Chart.
+* **Entry Timeframe:** 15-Minute (M15) Chart.
+* **Timing & Session Rules:**
+  * **For Forex Pairs:** The key 4-hour candle starts at **9:00 AM**.
+  * **For Indices (Nasdaq, Dow, S&P 500):** The key 4-hour candle starts at **10:00 AM** (1-hour shift).
+  * **9:00 AM 4H Candle Duration:** Starts at **9:00 AM** and closes at **1:00 PM** (develops entirely within the New York Kill Zone).
+* **The Three Feeding CRT Candles (Predecessors):**
+  1. **9:00 PM:** Asia Range
+  2. **1:00 AM:** London Range
+  3. **5:00 AM:** London Lunch / NY Opening Phase
+
+---
+
+### **4. Mechanics of the Setup (Feeder Sequence & Core Model)**
+* **Core Model Sequence:**  
+  $$\text{1 AM Range} \rightarrow \text{5 AM Manipulation (Turtle Soup)} \rightarrow \text{9 AM Expansion}$$
+* **Intraday Profiles Breakdown:**
+  * **New York Reversal 1.1:** 1 AM & 5 AM form a range $\rightarrow$ 9 AM provides manipulation & reversal.
+  * **New York Reversal 1.2:** 9 PM range $\rightarrow$ 1 AM & 5 AM manipulate towards key level $\rightarrow$ 9 AM manipulates further into a key level and reverses.
+  * **New York Continuation 1.1:** 1 AM range $\rightarrow$ 5 AM manipulation $\rightarrow$ 9 AM continuation expansion.
+  * **New York Continuation 1.2:** 9 PM range $\rightarrow$ 1 AM manipulation/expansion $\rightarrow$ 5 AM range $\rightarrow$ 9 AM turtle soup & continuation.
+* **OHLC/OLHC Rules:**
+  * **Bullish Bias:** Price trades **below** the 9:00 AM opening price $\rightarrow$ Purge 1 AM / 5 AM Low $\rightarrow$ Tap Key Level $\rightarrow$ Model-1 (Order Block / FVG Engulf) $\rightarrow$ Expansion Higher $\rightarrow$ High & Close.
+  * **Bearish Bias:** Price trades **above** the 9:00 AM opening price $\rightarrow$ Purge 1 AM / 5 AM High $\rightarrow$ Tap Key Level $\rightarrow$ Model-1 $\rightarrow$ Expansion Lower $\rightarrow$ Low & Close.
+
+---
+
+### **5. Stop Loss & Invalidation Criteria**
+* **Stop Loss Placement:** 
+  * Placed **strictly beyond the swept 5:00 AM or 1:00 AM swing low/high (Turtle Soup level)** or **below/above the Model-1 Order Block extreme**.
+* **Invalidation Rules:**
+  * If price breaks through daily liquidity (DOL) before the setup forms, or if the 9:00 AM candle fails to respect structural time filters.
+
+---
+
+### **6. Take Profit & Draw On Liquidity (DOL)**
+* **Take Profit Targets:** 
+  * Higher Timeframe (HTF) Daily Draw On Liquidity (DOL), opposing session highs/lows, or structural liquidity pools.
+* **Context Dependency:**
+  * **Reversal Profiles:** Target liquidity on the opposite side of the daily range once the daily DOL is hit.
+  * **Continuation Profiles:** Target expansion aligned with existing order flow when the daily DOL has *not* yet been reached.
+
+---
+
+### **7. Algorithmic Rules for Python Trading Agents & Backtest Engine**
+
+```python
+class NineAmCRTModel:
+
+    def __init__(self, asset_class="forex"):
+        # Asset class shifts start time for 4H CRT candle
+        self.crt_start_hour = 9 if asset_class == "forex" else 10
+        self.entry_timeframe = "15m"
+        self.profile_type = None
+
+    def check_non_negotiables(
+        self, daily_dol, market_bias, current_structure_level, timestamp
+    ):
+        # Rule 1: DOL Alignment
+        if daily_dol.direction != market_bias:
+            return False
+
+        # Rule 2: Market Structure at Key Level
+        if not current_structure_level.is_valid:
+            return False
+
+        # Rule 3: Key Time Filter (Primary: 09:00 - 01:00, Secondary: 09:30 - 10:30)
+        hour = timestamp.hour
+        minute = timestamp.minute
+        is_primary_window = 9 <= hour < 13
+        is_secondary_window = (hour == 9 and minute >= 30) or (
+            hour == 10 and minute <= 30
+        )
+
+        if not (is_primary_window or is_secondary_window):
+            return False
+
+        return True
+
+    def execute_entry_logic(self, candles_15m, opening_price_9am):
+        last_candle = candles_15m[-1]
+
+        # Directional Bias based on 9 AM Open
+        is_bullish = last_candle.close < opening_price_9am
+        is_bearish = last_candle.close > opening_price_9am
+
+        # Model-1 Entry: Engulfing Order Block / FVG after Turtle Soup sweep
+        if is_bullish:
+            if last_candle.swept_low and last_candle.is_engulfing_bullish():
+                return {
+                    "action": "BUY",
+                    "entry": last_candle.close,
+                    "stop_loss": last_candle.swing_low - 0.0005,
+                }
+
+        elif is_bearish:
+            if last_candle.swept_high and last_candle.is_engulfing_bearish():
+                return {
+                    "action": "SELL",
+                    "entry": last_candle.close,
+                    "stop_loss": last_candle.swing_high + 0.0005,
+                }
+
+        return {"action": "HOLD"}
+```

@@ -19,7 +19,7 @@ class BacktestEngine:
         period: str = "60d",
         rr_target: float = 2.0,
         apply_crt_filter: bool = True,
-        strategy_model: str = "crt_1am" # "crt_1am" | "london_ny" | "combined"
+        strategy_model: str = "crt_1am" # "crt_1am" | "crt_9am" | "london_ny" | "combined"
     ) -> Dict[str, Any]:
         """
         Executes an institutional bar-by-bar backtest:
@@ -29,8 +29,13 @@ class BacktestEngine:
             * 02:00 - 04:00 AM NY high-probability execution window
             * M15 Model-1 confirmation (Market Structure Shift & Displacement)
             * Trailing Breakeven protection at +1.0R
-        - Strategy 2: London & NY Killzone CRT (Asian session sweeps & FVGs)
-        - Strategy 3: Combined Institutional CRT Suite
+        - Strategy 2: 09:00 AM CRT (Episode 11 by Mado):
+            * 1 AM & 5 AM NY predecessor feeder candles
+            * 09:00 AM NY opening price anchor (OLHC/OHLC accumulation/distribution)
+            * 09:00 - 13:00 NY New York Killzone execution (09:30-10:30 sweet spot)
+            * Sweeps of 1AM/5AM feeder extremes with M15 Model-1 confirmation
+        - Strategy 3: London & NY Killzone CRT (Asian session sweeps & FVGs)
+        - Strategy 4: Combined Institutional CRT Suite
         """
         cfg = SUPPORTED_ASSETS.get(symbol.upper(), {"yf_symbol": symbol, "decimals": 2})
         yf_sym = cfg.get("yf_symbol", symbol)
@@ -72,13 +77,23 @@ class BacktestEngine:
         cooldown_bars = 0
         window_size = 40
 
-        # Asian 9 PM NY (21:00 - 01:00 NY) Reference Range
+        # 1 AM CRT Variables: Asian 9 PM NY (21:00 - 01:00 NY) Reference Range
         ref_9pm_high = 0.0
         ref_9pm_low = 9999999.0
         swept_9pm_low = False
         swept_9pm_high = False
         purge_low_wick = 9999999.0
         purge_high_wick = 0.0
+
+        # 9 AM CRT Variables: 1 AM & 5 AM Predecessor Feeder Candles
+        feeder_high = 0.0
+        feeder_low = 9999999.0
+        open_9am = 0.0
+        swept_feeder_low = False
+        swept_feeder_high = False
+        purge_9am_low_wick = 9999999.0
+        purge_9am_high_wick = 0.0
+        anchor_9am_hour = 10 if "BTC" in symbol.upper() else 9
 
         # Standard Asian Range (20:00 - 02:00 NY)
         asian_high = 0.0
@@ -195,12 +210,27 @@ class BacktestEngine:
                     ref_9pm_high = max(ref_9pm_high, curr_h)
                     ref_9pm_low = min(ref_9pm_low, curr_l)
 
+            # Build 9 AM CRT Feeder Ranges (1 AM & 5 AM NY candles, hours 1 to 8 NY)
+            if 1 <= hour <= 8:
+                if hour == 1 and minute == 0:
+                    feeder_high = curr_h
+                    feeder_low = curr_l
+                    swept_feeder_low = False
+                    swept_feeder_high = False
+                    purge_9am_low_wick = 9999999.0
+                    purge_9am_high_wick = 0.0
+                else:
+                    feeder_high = max(feeder_high, curr_h)
+                    feeder_low = min(feeder_low, curr_l)
+
+            # Record 9 AM NY Opening Price Anchor
+            if hour == anchor_9am_hour and minute == 0:
+                open_9am = curr_o
+
             # -------------------------------------------------------------------
             # STRATEGY MODEL A: 01:00 AM CRT MODEL (Episode 8 by Mado)
             # -------------------------------------------------------------------
             if strategy_model in ["crt_1am", "combined"]:
-                # 01:00 AM Candle (01:00 - 02:00 NY): Manipulation & Purge Window
-                # Beginners strictly avoid trading here; track turtle soup purge
                 if hour == 1:
                     if ref_9pm_high > 0 and curr_h > ref_9pm_high:
                         swept_9pm_high = True
@@ -209,18 +239,15 @@ class BacktestEngine:
                         swept_9pm_low = True
                         purge_low_wick = min(purge_low_wick, curr_l)
 
-                # 02:00 - 04:00 AM NY: High-Probability Execution Window
                 elif hour in [2, 3]:
                     if swept_9pm_high and curr_h > purge_high_wick:
                         purge_high_wick = curr_h
                     if swept_9pm_low and curr_l < purge_low_wick:
                         purge_low_wick = curr_l
 
-                    # HTF Filter alignment
                     htf_trend_bull = curr_c >= sma50[i] if not np.isnan(sma50[i]) else True
                     htf_trend_bear = curr_c <= sma50[i] if not np.isnan(sma50[i]) else True
 
-                    # 1AM CRT LONG: Asian Low Swept + M15 Model-1 Close back above
                     if swept_9pm_low and curr_c > ref_9pm_low and purge_low_wick < ref_9pm_low and (not apply_crt_filter or htf_trend_bull):
                         entry = curr_c
                         sl_offset = (purge_low_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
@@ -242,7 +269,6 @@ class BacktestEngine:
                             swept_9pm_low = False
                             continue
 
-                    # 1AM CRT SHORT: Asian High Swept + M15 Model-1 Close back below
                     elif swept_9pm_high and curr_c < ref_9pm_high and purge_high_wick > ref_9pm_high and (not apply_crt_filter or htf_trend_bear):
                         entry = curr_c
                         sl_offset = (purge_high_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
@@ -265,9 +291,68 @@ class BacktestEngine:
                             continue
 
             # -------------------------------------------------------------------
-            # STRATEGY MODEL B: LONDON & NY KILLZONE CRT MODEL (02-05 & 08-11 NY)
+            # STRATEGY MODEL B: 09:00 AM CRT MODEL (Episode 11 by Mado)
             # -------------------------------------------------------------------
-            if strategy_model in ["london_ny", "combined"]:
+            if strategy_model in ["crt_9am", "combined"]:
+                if anchor_9am_hour <= hour < 13 and open_9am > 0:
+                    if curr_h > feeder_high:
+                        swept_feeder_high = True
+                        purge_9am_high_wick = max(purge_9am_high_wick, curr_h)
+                    if curr_l < feeder_low:
+                        swept_feeder_low = True
+                        purge_9am_low_wick = min(purge_9am_low_wick, curr_l)
+
+                    htf_trend_bull = curr_c >= sma50[i] if not np.isnan(sma50[i]) else True
+                    htf_trend_bear = curr_c <= sma50[i] if not np.isnan(sma50[i]) else True
+
+                    # 9AM CRT LONG: Below 9 AM Open + Swept Feeder Low + M15 Model-1 Close back above
+                    if curr_c < open_9am and swept_feeder_low and curr_c > feeder_low and purge_9am_low_wick < feeder_low and (not apply_crt_filter or htf_trend_bull):
+                        entry = curr_c
+                        sl_offset = (purge_9am_low_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
+                        sl = purge_9am_low_wick - sl_offset
+                        risk_dist = entry - sl
+                        if risk_dist > 0 and (risk_dist / entry) < 0.02:
+                            tp = entry + (risk_dist * rr_target)
+                            active_trade = {
+                                "trade_num": len(trades) + 1,
+                                "entry_time": curr_time,
+                                "symbol": symbol,
+                                "direction": "BUY",
+                                "entry_price": round(entry, cfg["decimals"]),
+                                "stop_loss": round(sl, cfg["decimals"]),
+                                "take_profit": round(tp, cfg["decimals"]),
+                                "risk_dist": risk_dist,
+                                "setup_type": "09:00 AM CRT Bullish Expansion (Ep 11)"
+                            }
+                            swept_feeder_low = False
+                            continue
+
+                    # 9AM CRT SHORT: Above 9 AM Open + Swept Feeder High + M15 Model-1 Close back below
+                    elif curr_c > open_9am and swept_feeder_high and curr_c < feeder_high and purge_9am_high_wick > feeder_high and (not apply_crt_filter or htf_trend_bear):
+                        entry = curr_c
+                        sl_offset = (purge_9am_high_wick * 0.0006) if "XAU" in symbol or "BTC" in symbol else 0.0004
+                        sl = purge_9am_high_wick + sl_offset
+                        risk_dist = sl - entry
+                        if risk_dist > 0 and (risk_dist / entry) < 0.02:
+                            tp = entry - (risk_dist * rr_target)
+                            active_trade = {
+                                "trade_num": len(trades) + 1,
+                                "entry_time": curr_time,
+                                "symbol": symbol,
+                                "direction": "SELL",
+                                "entry_price": round(entry, cfg["decimals"]),
+                                "stop_loss": round(sl, cfg["decimals"]),
+                                "take_profit": round(tp, cfg["decimals"]),
+                                "risk_dist": risk_dist,
+                                "setup_type": "09:00 AM CRT Bearish Expansion (Ep 11)"
+                            }
+                            swept_feeder_high = False
+                            continue
+
+            # -------------------------------------------------------------------
+            # STRATEGY MODEL C: LONDON & NY KILLZONE CRT MODEL (02-05 & 08-11 NY)
+            # -------------------------------------------------------------------
+            if strategy_model in ["london_ny"]:
                 is_london = 2 <= hour <= 5
                 is_ny = 8 <= hour <= 11
                 if apply_crt_filter and not (is_london or is_ny):
